@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+rotate_sim
+dist/
+*.egg-info/
+.venv/

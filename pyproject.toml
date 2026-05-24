@@ -1,0 +1,17 @@
+[project]
+name = "forward-sim"
+version = "0.1.0"
+description = "Stream iOS Simulator to iPad browser with touch and keyboard"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9",
+    "pyobjc",
+    "fb-idb",
+]
+
+[project.scripts]
+forward-sim = "forward_sim.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
