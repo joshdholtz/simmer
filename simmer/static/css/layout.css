@@ -107,20 +107,45 @@ html, body {
   min-height: 0;
   min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  flex-direction: column;
   overflow: hidden;
-  /* padding-bottom leaves room for the controls pill (56px tall + 2×16px gap) */
-  padding: var(--sp-5) var(--sp-5) calc(var(--sp-5) + 60px);
 }
 
-#viewport-wrap {
+/* ── Sim panels row ── */
+#sim-panels {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Individual simulator panel */
+.sim-panel {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  /* bottom padding reserves space for the controls pill */
+  padding: var(--sp-5) var(--sp-5) calc(var(--sp-4) + 48px + var(--sp-4));
+  overflow: hidden;
+  cursor: default;
 }
-#viewport-wrap.hidden { display: none; }
+
+/* Draggable divider between panels */
+.sim-divider {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--border-subtle);
+  transition: background var(--dur-fast);
+  position: relative;
+  z-index: 5;
+}
+.sim-divider:hover  { background: rgba(10,132,255,0.4); }
+.sim-divider:active { background: var(--accent); }
 
 /* ── Terminal panel ── */
 #terminal-panel {
@@ -142,13 +167,13 @@ html, body {
   pointer-events: none;
 }
 
-/* Side-pinned terminal */
+/* Side-pinned terminal — flex-row puts handle on left, .term-body on right */
 #content.pinned-right #terminal-panel {
   width: 320px;
   height: auto !important;
   border-top: none;
   border-left: 1px solid var(--border);
-  flex-direction: column;
+  flex-direction: row;
 }
 #content.pinned-right #terminal-panel.closed {
   width: 0 !important;
@@ -175,3 +200,35 @@ html, body {
   right: 0;
   border-top: 1px solid var(--border);
 }
+
+/* ── Bottom tab bar ── */
+#bottom-tab-bar {
+  flex-shrink: 0;
+  height: 30px;
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Hide when terminal is pinned to the side (it's already visible there) */
+#content.pinned-right #bottom-tab-bar { display: none; }
+
+.bottom-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 var(--sp-3);
+  background: none;
+  border: none;
+  border-top: 2px solid transparent;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
+  white-space: nowrap;
+}
+.bottom-tab:hover  { color: var(--text-primary); background: var(--bg-overlay); }
+.bottom-tab.active { color: var(--accent); border-top-color: var(--accent); }

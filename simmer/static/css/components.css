@@ -126,9 +126,9 @@
 .proj-filter input { accent-color: var(--success); }
 
 /* ── Device frame (simulator viewport) ── */
-/* Width and height are set explicitly by JS via sizeDeviceFrame().        */
+/* Width and height are set explicitly by JS via sizeFrame().              */
 /* The canvas fills the frame 100%; JS drives the actual pixel dimensions. */
-#device-frame {
+.device-frame {
   position: relative;
   flex-shrink: 0;
   background: #000;
@@ -136,9 +136,15 @@
   overflow: hidden;
   box-shadow: var(--shadow-device);
   border: 1px solid rgba(255,255,255,0.06);
+  transition: box-shadow var(--dur-mid);
 }
 
-#device-frame canvas {
+/* Subtle accent ring on the focused panel's frame */
+.sim-panel.focused .device-frame {
+  box-shadow: var(--shadow-device), 0 0 0 2px rgba(10,132,255,0.4);
+}
+
+.device-frame canvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -147,7 +153,7 @@
 }
 
 /* ── Connection overlay ── */
-#connect-overlay {
+.connect-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0.85);
@@ -162,8 +168,8 @@
   padding: var(--sp-6);
   backdrop-filter: blur(4px);
 }
-#connect-overlay.hidden { display: none; }
-#connect-overlay code {
+.connect-overlay.hidden { display: none; }
+.connect-overlay code {
   font-family: var(--font-mono);
   font-size: 11px;
   background: var(--bg-overlay);
@@ -197,6 +203,7 @@
 
 /* ── Empty state ── */
 #empty-state {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -212,8 +219,8 @@
 .empty-title { font-size: 16px; font-weight: 500; color: var(--text-secondary); }
 .empty-sub   { font-size: 13px; }
 
-/* ── Floating controls pill ── */
-#controls-pill {
+/* ── Floating controls pill (per sim panel) ── */
+.controls-pill {
   position: absolute;
   bottom: var(--sp-4);
   left: 50%;
@@ -231,7 +238,6 @@
   z-index: 20;
   white-space: nowrap;
 }
-#controls-pill.hidden { display: none; }
 
 .pill-btn {
   display: flex;

@@ -187,7 +187,7 @@ def home(udid: str) -> None:
     _key_event(_CMD, False)
 
 
-_ROTATE_LOG = "/tmp/forward_sim_rotate.log"
+_ROTATE_LOG = "/tmp/simmer_rotate.log"
 
 
 def _rlog(*args) -> None:

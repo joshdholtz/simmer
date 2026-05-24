@@ -10,7 +10,7 @@ fail() { echo -e "  ${RED}✗${NC} $1"; }
 info() { echo -e "  ${BLUE}→${NC} $1"; }
 
 echo ""
-echo -e "${BOLD}forward-sim setup${NC}"
+echo -e "${BOLD}simmer setup${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── Homebrew ───────────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ elif [ "$HAS_IDB" = "1" ]; then
   warn "  (add Terminal or your Python binary, then re-run this script)"
 else
   fail "No working backend detected"
-  fail "idb import failed even after install — try: $PYTHON -m pip install --force-reinstall fb-idb"
+  fail "idb import failed even after install — try: $PYTHON -m pip install --force-re
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ echo ""
 echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${BOLD}Ready. Start the server:${NC}"
 echo ""
-echo -e "  ${BLUE}cd $(pwd) && python3 -m forward_sim${NC}"
+echo -e "  ${BLUE}cd $(pwd) && simmer${NC}"
 echo ""
 echo "Options:"
 echo "  --port 8080        HTTP port"

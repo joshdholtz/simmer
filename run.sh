@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
     --quality)      QUALITY="$2";     shift 2 ;;
     --project-dir)  PROJECT_DIR="$2"; shift 2 ;;
     --kill)
-      pkill -f "forward_sim" 2>/dev/null || true
+      pkill -f "simmer" 2>/dev/null || true
       lsof -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | awk 'NR>1{print $2}' | xargs -r kill -9 2>/dev/null || true
       echo "Stopped."
       exit 0
@@ -36,4 +36,4 @@ if [[ -z "$PROJECT_DIR" ]]; then
 fi
 ARGS="$ARGS --project-dir $PROJECT_DIR"
 
-exec python3 -m forward_sim $ARGS
+exec python3 -m simmer $ARGS

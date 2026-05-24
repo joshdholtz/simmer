@@ -4,19 +4,17 @@ No macOS permissions required. Needs idb installed:
 """
 from __future__ import annotations
 import json
+import shutil
 import struct
 import subprocess
-import sys
 import tempfile
-from pathlib import Path
 from typing import Optional
 
 from .backend_base import SimDevice, logical_size
 
 name = "compat (simctl+idb)"
 
-# idb is installed alongside the running Python, not necessarily on $PATH
-_IDB = str(Path(sys.executable).parent / "idb")
+_IDB = shutil.which("idb") or "idb"
 
 
 # ── Sim discovery ──────────────────────────────────────────────────────────────
@@ -118,7 +116,7 @@ def home(udid: str) -> None:
     _idb("ui", "button", "HOME", "--udid", udid)
 
 
-_ROTATE_LOG = "/tmp/forward_sim_rotate.log"
+_ROTATE_LOG = "/tmp/simmer_rotate.log"
 
 
 def _rlog(*args) -> None:
@@ -189,10 +187,13 @@ def rotate(udid: str) -> None:
 
     # Use the compiled Swift helper which has its own Accessibility identity.
     # On first run macOS prompts the user to grant it — one-time setup.
+    import shutil
     from pathlib import Path
-    helper = Path(__file__).parent.parent / "rotate_sim"
+    # Check PATH first (installed via Homebrew), then fall back to dev repo root
+    helper_path = shutil.which("rotate_sim") or str(Path(__file__).parent.parent / "rotate_sim")
+    helper = Path(helper_path)
     if not helper.exists():
-        _rlog(f"rotate_sim binary not found at {helper} — run: swiftc rotate_sim.swift -o rotate_sim")
+        _rlog(f"rotate_sim binary not found — run: swiftc rotate_sim.swift -o rotate_sim")
         return
 
     # Pass window center coordinates so the Swift helper can click the right
@@ -214,7 +215,7 @@ def rotate(udid: str) -> None:
         print(
             "\n[rotate] rotate_sim needs Accessibility permission.\n"
             "  macOS has opened System Settings → Privacy & Security → Accessibility.\n"
-            "  Click '+', navigate to forward-sim/rotate_sim, and add it.\n"
+            "  Click '+', navigate to simmer/rotate_sim, and add it.\n"
             "  Then tap Rotate again.\n",
             flush=True,
         )

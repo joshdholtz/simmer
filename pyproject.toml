@@ -1,17 +1,19 @@
 [project]
-name = "forward-sim"
+name = "simmer"
 version = "0.1.0"
-description = "Stream iOS Simulator to iPad browser with touch and keyboard"
+description = "Stream iOS Simulator to your browser with touch, keyboard, and terminal"
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.9",
-    "pyobjc",
-    "fb-idb",
+    "pyobjc-framework-Quartz",
 ]
 
 [project.scripts]
-forward-sim = "forward_sim.__main__:main"
+simmer = "simmer.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["simmer"]

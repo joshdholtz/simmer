@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>forward-sim</title>
+  <title>simmer</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
   <link rel="stylesheet" href="/css/tokens.css">
@@ -20,7 +20,7 @@
   <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
   <aside id="sidebar">
     <div class="sidebar-logo">
-      <span class="sidebar-logo-name">forward-sim</span>
+      <span class="sidebar-logo-name">simmer</span>
       <span id="mode-badge" class="mode-badge">…</span>
     </div>
 
@@ -56,56 +56,20 @@
     </div>
   </aside>
 
-  <!-- ── Content area (viewport + terminal) ───────────────────────────────── -->
+  <!-- ── Content area ──────────────────────────────────────────────────────── -->
   <div id="content">
 
-    <!-- Viewport -->
+    <!-- Viewport: sim panels are injected here by JS -->
     <div id="viewport-area">
-
       <div id="empty-state">
         <div class="empty-icon">📱</div>
         <div class="empty-title">No simulator selected</div>
         <div class="empty-sub">Choose a device from the sidebar</div>
       </div>
+      <div id="sim-panels"></div>
+    </div>
 
-      <div id="viewport-wrap" class="hidden">
-        <div id="device-frame">
-          <canvas id="screen"></canvas>
-          <div id="connect-overlay">
-            <div class="spinner"></div>
-            <span>Connecting…</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Floating controls pill -->
-      <div id="controls-pill" class="hidden">
-        <button class="pill-btn" id="btn-rotate" title="Rotate left">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 6.5-6.5H7"/><path d="M7 1.5v4H3"/></svg>
-        </button>
-        <div class="pill-sep"></div>
-        <button class="pill-btn" id="btn-home" title="Home button">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="7.5"/><rect x="6.5" y="6.5" width="7" height="7" rx="2.5"/></svg>
-        </button>
-        <div class="pill-sep"></div>
-        <button class="pill-btn" id="btn-appear" title="Switch to light">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a6.5 6.5 0 0 0 0 13A7.5 7.5 0 0 1 10 3.5z"/></svg>
-        </button>
-        <div class="pill-sep"></div>
-        <button class="pill-btn" id="btn-kbd" title="Keyboard input">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="16" height="10" rx="2.5"/><path d="M5.5 10h.5M8.5 10H9M12 10h.5M15 10h.5M5.5 13H14.5"/></svg>
-        </button>
-        <div class="pill-sep"></div>
-        <button class="pill-btn" id="btn-terminal" title="Terminal">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l4 3-4 3"/><path d="M11 13h5"/></svg>
-        </button>
-        <div class="pill-sep"></div>
-        <div id="status-dot" class="status-dot" style="margin: 0 6px;"></div>
-      </div>
-
-    </div><!-- /viewport-area -->
-
-    <!-- Keyboard bar -->
+    <!-- Keyboard bar (shared, applies to focused panel) -->
     <div id="kbd-bar">
       <input id="kbd-input" class="kbd-input" type="text"
              placeholder="Type to send…"
@@ -115,21 +79,31 @@
       <button id="kbd-send" class="kbd-send">Send</button>
     </div>
 
+    <!-- Bottom tab bar — persistent terminal toggle -->
+    <div id="bottom-tab-bar">
+      <button id="btn-terminal" class="bottom-tab">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 8l3 3-3 3M11 14h3"/></svg>
+        Terminal
+      </button>
+    </div>
+
     <!-- Terminal panel -->
     <div id="terminal-panel" class="closed">
       <div class="term-resize-handle" id="term-resize-handle"></div>
-      <div class="drawer-handle">
-        <div id="term-tabs-bar" class="term-tabs-bar"></div>
-        <div class="drawer-actions">
-          <div id="term-status-dot" class="status-dot" style="margin-right: 4px;"></div>
-          <button class="drawer-btn" id="btn-pin-term" title="Pin to side">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M13 2v16"/></svg>
-          </button>
-          <button class="drawer-btn" id="btn-add-term" title="New terminal" style="font-size:16px;font-weight:300;">+</button>
-          <button class="drawer-btn" id="btn-close-term" title="Close terminal">×</button>
+      <div class="term-body">
+        <div class="drawer-handle">
+          <div id="term-tabs-bar" class="term-tabs-bar"></div>
+          <div class="drawer-actions">
+            <div id="term-status-dot" class="status-dot" style="margin-right:4px;"></div>
+            <button class="drawer-btn" id="btn-pin-term" title="Pin to side">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M13 2v16"/></svg>
+            </button>
+            <button class="drawer-btn" id="btn-add-term" title="New terminal" style="font-size:16px;font-weight:300;">+</button>
+            <button class="drawer-btn" id="btn-close-term" title="Close terminal">×</button>
+          </div>
         </div>
+        <div id="term-panes"></div>
       </div>
-      <div id="term-panes"></div>
     </div>
 
   </div><!-- /content -->

@@ -13,6 +13,7 @@ import struct
 import subprocess
 import termios
 import uuid
+from importlib.resources import files
 from pathlib import Path
 from typing import Any, Optional
 
@@ -21,7 +22,7 @@ from aiohttp import web
 
 from .backend_base import sim_has_app
 
-STATIC_DIR = Path(__file__).parent.parent / "static"
+STATIC_DIR = Path(str(files(__package__).joinpath("static")))
 
 # One single-thread executor per UDID for captures.
 # max_workers=1 means at most one hung Quartz thread per simulator, ever.
@@ -592,7 +593,7 @@ async def run(
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    print(f"\nforward-sim  [{backend.name}]")
+    print(f"\nsimmer  [{backend.name}]")
     print("─" * 40)
 
     local_ip = _local_ip()

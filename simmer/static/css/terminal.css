@@ -4,17 +4,28 @@
   flex-shrink: 0;
   cursor: row-resize;
   background: transparent;
-  position: relative;
   transition: background var(--dur-fast);
   z-index: 1;
 }
-.term-resize-handle:hover { background: rgba(10, 132, 255, 0.3); }
+.term-resize-handle:hover  { background: rgba(10, 132, 255, 0.3); }
 .term-resize-handle:active { background: var(--accent); }
 
+/* In pinned-right mode the panel is flex-row, so the handle becomes a
+   vertical strip on the left edge. width:5px + align-self:stretch does it. */
 #content.pinned-right .term-resize-handle {
   width: 5px;
   height: auto;
+  align-self: stretch;
   cursor: col-resize;
+}
+
+/* ── Term body (wraps drawer-handle + panes) ── */
+.term-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Drawer header ── */
@@ -106,6 +117,7 @@
 #term-panes {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   position: relative;
 }
 
