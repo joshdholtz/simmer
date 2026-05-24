@@ -163,6 +163,8 @@ def make_app(
     app.router.add_get("/api/sims", _sims)
     app.router.add_get("/ws/pty", _ws_pty)   # must be before /ws/{udid}
     app.router.add_get("/ws/{udid}", _ws)
+    app.router.add_static("/css", STATIC_DIR / "css")
+    app.router.add_static("/js", STATIC_DIR / "js")
     return app
 
 

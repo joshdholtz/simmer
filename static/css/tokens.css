@@ -1,0 +1,60 @@
+:root {
+  /* Backgrounds — zinc dark (shadcn-inspired) */
+  --bg-base:     #09090b;
+  --bg-elevated: #18181b;
+  --bg-overlay:  #27272a;
+  --bg-active:   #3f3f46;
+
+  /* Borders */
+  --border:        #27272a;
+  --border-subtle: #1f1f22;
+  --border-strong: #52525b;
+
+  /* Text */
+  --text-primary:   #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-tertiary:  #71717a;
+
+  /* Accent — Apple system blue (dark mode) */
+  --accent:       #0a84ff;
+  --accent-hover: #2196ff;
+  --accent-bg:    rgba(10, 132, 255, 0.12);
+
+  /* Status */
+  --success: #30d158;
+  --warning: #ff9f0a;
+  --error:   #ff453a;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+
+  /* Spacing (8-pt grid) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* Radii */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --shadow-sm:     0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md:     0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg:     0 8px 40px rgba(0,0,0,0.6);
+  --shadow-device: 0 24px 80px rgba(0,0,0,0.8), 0 4px 20px rgba(0,0,0,0.5);
+
+  /* Motion */
+  --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:  cubic-bezier(0.4, 0, 1, 1);
+  --dur-fast: 120ms;
+  --dur-mid:  200ms;
+  --dur-slow: 320ms;
+}

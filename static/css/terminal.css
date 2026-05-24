@@ -1,0 +1,69 @@
+/* ── Drawer handle ── */
+.drawer-handle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.drawer-grip {
+  width: 32px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+  letter-spacing: 0.2px;
+}
+
+.drawer-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.drawer-close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px var(--sp-1);
+  border-radius: var(--r-sm);
+  transition: color var(--dur-fast), background var(--dur-fast);
+  flex-shrink: 0;
+}
+.drawer-close:hover { color: var(--text-primary); background: var(--bg-overlay); }
+
+/* ── Terminal area ── */
+#term-el {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--sp-2) var(--sp-2) 0;
+}
+
+#term-el .xterm {
+  height: 100%;
+}
+
+#term-el .xterm-viewport {
+  background: transparent !important;
+}
+
+#term-el .xterm-screen {
+  padding: 4px var(--sp-2);
+}
