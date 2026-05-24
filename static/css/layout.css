@@ -17,7 +17,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Root layout ── */
+/* ── Root ── */
 #app {
   display: flex;
   height: 100dvh;
@@ -44,7 +44,6 @@ html, body {
   padding: var(--sp-4) var(--sp-4) var(--sp-3);
   flex-shrink: 0;
 }
-
 .sidebar-logo-name {
   font-size: 15px;
   font-weight: 600;
@@ -60,7 +59,6 @@ html, body {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
-
 .sidebar-section::-webkit-scrollbar { width: 4px; }
 .sidebar-section::-webkit-scrollbar-track { background: transparent; }
 .sidebar-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -83,24 +81,37 @@ html, body {
   flex-direction: column;
   gap: var(--sp-3);
 }
-
 .sidebar-settings {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
 }
 
-/* ── Main ── */
-#main {
+/* ── Content (right of sidebar) ── */
+#content {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* viewport on top, terminal on bottom */
+  overflow: hidden;
+}
+
+/* When terminal is pinned to the right side */
+#content.pinned-right {
+  flex-direction: row;
+}
+
+/* ── Viewport area ── */
+#viewport-area {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  padding: var(--sp-4) var(--sp-5) calc(var(--sp-4) + 56px); /* bottom pad for pill */
   overflow: hidden;
-  background: var(--bg-base);
 }
 
 #viewport-wrap {
@@ -109,48 +120,59 @@ html, body {
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: var(--sp-6) var(--sp-6) calc(var(--sp-6) + 56px);
 }
-
 #viewport-wrap.hidden { display: none; }
 
-/* ── Terminal drawer ── */
-#terminal-drawer {
-  position: fixed;
-  bottom: 0;
-  left: 232px;
-  right: 0;
-  height: 340px;
-  background: var(--bg-elevated);
-  border-top: 1px solid var(--border);
-  transform: translateY(100%);
-  transition: transform var(--dur-slow) var(--ease);
-  z-index: 40;
+/* ── Terminal panel ── */
+#terminal-panel {
+  flex-shrink: 0;
+  height: 300px;
   display: flex;
   flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-#terminal-drawer.open {
-  transform: translateY(0);
-}
-
-/* ── Keyboard bar ── */
-#kbd-bar {
-  position: fixed;
-  left: 232px;
-  right: 0;
-  bottom: 0;
   background: var(--bg-elevated);
   border-top: 1px solid var(--border);
-  padding: var(--sp-2) var(--sp-3);
-  padding-bottom: calc(var(--sp-2) + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  /* Animate only open/close, not drag-resize */
+}
+#terminal-panel.animating {
+  transition: height var(--dur-slow) var(--ease), width var(--dur-slow) var(--ease);
+}
+#terminal-panel.closed {
+  height: 0 !important;
+  border-top-color: transparent;
+  pointer-events: none;
+}
+
+/* Side-pinned terminal */
+#content.pinned-right #terminal-panel {
+  width: 320px;
+  height: auto !important;
+  border-top: none;
+  border-left: 1px solid var(--border);
+  flex-direction: column;
+}
+#content.pinned-right #terminal-panel.closed {
+  width: 0 !important;
+  border-left-color: transparent;
+}
+
+/* ── Keyboard bar (between viewport and terminal) ── */
+#kbd-bar {
+  flex-shrink: 0;
   display: none;
   align-items: center;
   gap: var(--sp-2);
-  z-index: 50;
-  transition: bottom var(--dur-slow) var(--ease);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
 }
-
 #kbd-bar.visible { display: flex; }
-#kbd-bar.above-terminal { bottom: 340px; }
+
+/* In right-pin mode, kbd-bar lives inside viewport-area at the bottom */
+#content.pinned-right #kbd-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--border);
+}
