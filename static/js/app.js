@@ -11,6 +11,8 @@ const viewportWrap   = $('viewport-wrap');
 const canvas         = $('screen');
 const connectOverlay = $('connect-overlay');
 const controlsPill   = $('controls-pill');
+const viewportArea   = $('viewport-area');
+const deviceFrame    = $('device-frame');
 const content        = $('content');
 const termPanel      = $('terminal-panel');
 const termPanes      = $('term-panes');
@@ -108,6 +110,22 @@ function renderDeviceList() {
   });
 }
 
+// ── Device frame sizing ───────────────────────────────────────────────────────
+function sizeDeviceFrame(devW, devH) {
+  const area  = viewportArea.getBoundingClientRect();
+  // Subtract padding (20px each side horizontally, 20px top + 76px bottom)
+  const availW = Math.max(1, area.width  - 40);
+  const availH = Math.max(1, area.height - 96);
+  const scale  = Math.min(availW / devW, availH / devH);
+  deviceFrame.style.width  = Math.round(devW * scale) + 'px';
+  deviceFrame.style.height = Math.round(devH * scale) + 'px';
+}
+
+// Refit whenever the viewport area changes size (terminal open/resize/pin)
+new ResizeObserver(() => {
+  if (canvas.width && canvas.height) sizeDeviceFrame(canvas.width, canvas.height);
+}).observe(viewportArea);
+
 // ── Simulator selection ───────────────────────────────────────────────────────
 function selectDevice(udid, name, w, h) {
   if (udid === activeUdid) return;
@@ -118,6 +136,7 @@ function selectDevice(udid, name, w, h) {
 
   canvas.width  = Math.min(w, h);
   canvas.height = Math.max(w, h);
+  sizeDeviceFrame(canvas.width, canvas.height);
 
   emptyState.classList.add('hidden');
   viewportWrap.classList.remove('hidden');
@@ -130,6 +149,7 @@ function selectDevice(udid, name, w, h) {
     quality: parseInt(qualSlider.value),
     onStatus: updateStatus,
     onFirstFrame: () => connectOverlay.classList.add('hidden'),
+    onOrientationChange: (w, h) => sizeDeviceFrame(w, h),
   });
   stream.updateSettings({ data_saver: dsBtn.classList.contains('active') });
 }

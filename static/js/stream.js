@@ -10,9 +10,9 @@ export class SimStream {
   #ws = null; #connectTimer = null; #reconnectTimer = null; #watchdog = null;
   #lastFrameAt = 0; #firstFrame = false; #frameInFlight = false;
   #portraitW; #portraitH; #isLandscape = false;
-  #onStatus; #onFirstFrame;
+  #onStatus; #onFirstFrame; #onOrientationChange;
 
-  constructor(udid, canvas, { fps = 15, quality = 70, onStatus, onFirstFrame } = {}) {
+  constructor(udid, canvas, { fps = 15, quality = 70, onStatus, onFirstFrame, onOrientationChange } = {}) {
     this.#udid = udid;
     this.#canvas = canvas;
     this.#ctx = canvas.getContext('2d');
@@ -20,6 +20,7 @@ export class SimStream {
     this.#portraitH = canvas.height;
     this.#onStatus = onStatus ?? (() => {});
     this.#onFirstFrame = onFirstFrame ?? (() => {});
+    this.#onOrientationChange = onOrientationChange ?? (() => {});
 
     this.settings = { fps, quality, data_saver: false, dev_w: canvas.width, dev_h: canvas.height };
 
@@ -51,6 +52,7 @@ export class SimStream {
     this.#canvas.width  = landscape ? this.#portraitH : this.#portraitW;
     this.#canvas.height = landscape ? this.#portraitW : this.#portraitH;
     this.send({ type: 'settings', dev_w: this.#canvas.width, dev_h: this.#canvas.height });
+    this.#onOrientationChange(this.#canvas.width, this.#canvas.height);
   }
 
   #connect() {
