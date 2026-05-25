@@ -55,6 +55,12 @@ Optional, for the **compat** backend:
 brew install joshdholtz/tap/simmer
 ```
 
+To update:
+
+```bash
+brew update && brew upgrade joshdholtz/tap/simmer
+```
+
 ### From source
 
 ```bash
