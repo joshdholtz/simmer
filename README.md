@@ -1,6 +1,6 @@
 # 🫧 simmer
 
-> Stream your iOS Simulator to any browser — touch, keyboard, multi-sim, built-in terminal.
+> Stream your iOS Simulator or Android Emulator to any browser — touch, keyboard, multi-sim, built-in terminal.
 
 <p align="center">
   <img src="https://github.com/joshdholtz/simmer/raw/main/docs/hero.png" alt="simmer — iOS Simulator in your browser" width="100%">
@@ -15,7 +15,7 @@
 
 ---
 
-Run `simmer` in your project directory, open a browser, and your iOS Simulator appears — tappable, typeable, and shareable over your local network or Tailscale. No Xcode open. No npm. Works from an iPad on the couch.
+Run `simmer` in your project directory, open a browser, and your simulators appear — tappable, typeable, and shareable over your local network or Tailscale. iOS and Android side-by-side. No Xcode open. No npm. Works from an iPad on the couch.
 
 ## Why
 
@@ -25,11 +25,13 @@ I do most of my dev work SSHed into a Mac mini and I wanted a simple local way t
 
 ## Features
 
-- **Live stream** — renders the simulator at up to 30 fps in any browser tab
+- **Live stream** — renders at up to 30 fps in any browser tab
 - **Touch & type** — tap, swipe, rotate, send text, press hardware buttons
-- **Multi-sim** — open several simulators side-by-side with a draggable divider
+- **iOS + Android** — iOS Simulators and Android Emulators in the same sidebar, automatically detected
+- **Multi-sim** — open several devices side-by-side with a draggable divider
 - **Built-in terminal** — persistent PTY session that survives page refreshes (tmux-friendly)
-- **Boot from sidebar** — start a shut-down simulator without touching Xcode
+- **Boot from sidebar** — start a shut-down simulator or AVD with a searchable `+` picker
+- **Session restore** — reopens your last layout on restart
 - **Remote-friendly** — streams over your LAN or Tailscale from any device
 
 ## Requirements
@@ -46,6 +48,10 @@ Optional, for the **fast** backend (recommended):
 Optional, for the **compat** backend:
 
 - [`idb-companion`](https://github.com/facebook/idb) — `brew tap facebook/fb && brew install idb-companion`
+
+Optional, for **Android emulators**:
+
+- Android Studio (includes `adb` and the emulator — no separate install needed)
 
 ## Install
 
@@ -81,7 +87,6 @@ simmer --fps 30        # capture frame rate (default: 15)
 simmer --quality 80    # JPEG quality 10–95 (default: 70)
 simmer --mode fast     # force Quartz backend (iOS)
 simmer --mode compat   # force simctl+idb backend (iOS)
-simmer --mode android  # Android emulators via adb
 simmer --kill          # stop a running instance
 ```
 
@@ -89,13 +94,13 @@ Then open `http://localhost:4040` in any browser. From another device on your ne
 
 ## Backends
 
-simmer picks the best backend automatically:
+simmer picks the best backend automatically and combines them — iOS and Android devices appear together:
 
 | Mode | Capture | Input | Requires |
 |------|---------|-------|----------|
 | **fast** | Quartz (native) | CGEvent | Screen Recording + Accessibility |
 | **compat** | `simctl screenshot` | `idb` | `idb-companion` |
-| **android** | `adb screencap` | `adb input` | `android-platform-tools` |
+| **Android** | `adb screencap` | `adb input` | Android Studio |
 
 The startup log tells you which mode is active and what's needed to upgrade.
 
@@ -117,9 +122,9 @@ No permissions required; works immediately, lower frame rate.
 
 ### Android emulators
 
-If you have **Android Studio**, no extra install is needed — simmer uses the `adb` bundled in `~/Library/Android/sdk/platform-tools/` automatically.
+If you have **Android Studio**, nothing extra is needed. simmer finds the `adb` bundled in `~/Library/Android/sdk/platform-tools/` automatically.
 
-Just start an emulator from Android Studio and it will appear in simmer's sidebar alongside your iOS simulators.
+Start an emulator from Android Studio and it appears in the simmer sidebar alongside your iOS simulators. You can also boot AVDs directly from simmer's `+` picker.
 
 > **Don't use `brew install android-platform-tools`** — Homebrew's standalone adb starts a separate daemon and won't see emulators launched by Android Studio.
 
@@ -155,6 +160,8 @@ simmer/
   server.py            aiohttp HTTP + WebSocket server
   backend_quartz.py    Fast backend: Quartz window capture + CGEvent injection
   backend_simctl.py    Compat backend: simctl screenshot + idb input injection
+  backend_adb.py       Android backend: adb screencap + adb input
+  backend_multi.py     Combines multiple backends, routes by UDID
   backend_base.py      Shared helpers, device discovery, boot
   static/
     index.html
@@ -164,7 +171,7 @@ simmer/
 
 **Streaming pipeline:**
 
-1. Server captures the simulator window (Quartz or simctl) as JPEG
+1. Server captures the simulator/emulator window as JPEG (iOS) or PNG (Android)
 2. Frame is pushed over WebSocket as binary
 3. Browser decodes with `createObjectURL` and draws to `<canvas>`
 4. Touch / key events travel back over the same WebSocket
@@ -172,11 +179,11 @@ simmer/
 
 ## Prior art
 
-| Tool | Capture | Input | Terminal | Multi-sim | Install |
-|------|---------|-------|----------|-----------|---------|
-| [serve-sim](https://github.com/EvanBacon/serve-sim) | simctl | idb | ✗ | ✗ | npm |
-| [appetize.io](https://appetize.io) | cloud | cloud | ✗ | ✗ | account |
-| **simmer** | Quartz / simctl | CGEvent / idb | ✓ | ✓ | Homebrew |
+| Tool | Capture | Input | Terminal | Multi-sim | Android | Install |
+|------|---------|-------|----------|-----------|---------|---------|
+| [serve-sim](https://github.com/EvanBacon/serve-sim) | simctl | idb | ✗ | ✗ | ✗ | npm |
+| [appetize.io](https://appetize.io) | cloud | cloud | ✗ | ✗ | ✓ | account |
+| **simmer** | Quartz / simctl / adb | CGEvent / idb / adb | ✓ | ✓ | ✓ | Homebrew |
 
 ## Contributing
 
