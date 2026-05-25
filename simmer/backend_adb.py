@@ -120,6 +120,7 @@ def boot_avd(avd: str) -> None:
         [_EMULATOR, "-avd", avd, "-no-snapshot-load"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        start_new_session=True,  # detach from simmer's process group so Ctrl+C doesn't kill it
     )
 
 
