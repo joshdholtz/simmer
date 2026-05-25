@@ -105,14 +105,14 @@ def list_sims() -> list[SimDevice]:
 
 def list_available_avds() -> list[dict]:
     """Return AVDs that exist but aren't currently running."""
-    running = {s.udid for s in list_sims()}
+    # Normalize running device names to underscore form to match _EMULATOR -list-avds output
+    running = {s.name.replace(" ", "_") for s in list_sims()}
     try:
         r = subprocess.run([_EMULATOR, "-list-avds"], capture_output=True, text=True, timeout=5)
         avds = [l.strip() for l in r.stdout.splitlines() if l.strip()]
     except Exception:
         return []
-    # We can't know the serial before boot, so flag by AVD name
-    return [{"name": a.replace("_", " "), "avd": a} for a in avds]
+    return [{"name": a.replace("_", " "), "avd": a} for a in avds if a not in running]
 
 
 def boot_avd(avd: str) -> None:
