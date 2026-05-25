@@ -183,9 +183,15 @@ async def _index(request: web.Request) -> web.FileResponse:
 
 
 async def _info(request: web.Request) -> web.Response:
+    from .backend_base import has_screen_recording, has_accessibility, has_idb
     info: dict = {"mode": request.app["backend"].name}
     if request.app.get("bundle_id"):
         info["bundle_id"] = request.app["bundle_id"]
+    info["permissions"] = {
+        "screen_recording": has_screen_recording(),
+        "accessibility": has_accessibility(),
+        "idb": has_idb(),
+    }
     return web.json_response(info)
 
 

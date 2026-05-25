@@ -23,6 +23,10 @@ const qualVal        = $('qual-val');
 const dsBtn          = $('ds-btn');
 const projFilter     = $('proj-filter');
 const projFilterWrap = $('proj-filter-wrap');
+const permsWidget    = $('perms-widget');
+const permsToggle    = $('perms-toggle');
+const permsBody      = $('perms-body');
+const permsList      = $('perms-list');
 
 // ── State ────────────────────────────────────────────────────────────────────
 let allSims = [];
@@ -53,6 +57,53 @@ function simIcon(name) {
   return '📱';
 }
 
+// ── Permissions widget ────────────────────────────────────────────────────────
+let permsOpen = false;
+
+function renderPermsWidget(info) {
+  const p = info.permissions || {};
+  const isFast = (info.mode || '').startsWith('fast');
+
+  const missing = [];
+  if (!p.screen_recording) missing.push({
+    label: 'Screen Recording',
+    detail: 'System Settings → Privacy & Security → Screen Recording → add Terminal',
+  });
+  if (!p.accessibility) missing.push({
+    label: 'Accessibility',
+    detail: 'System Settings → Privacy & Security → Accessibility → add rotate_sim',
+  });
+
+  if (isFast || missing.length === 0) {
+    permsWidget.classList.add('hidden');
+    return;
+  }
+
+  permsWidget.classList.remove('hidden');
+
+  permsList.innerHTML = missing.map(m => `
+    <div class="perms-item">
+      <div class="perms-item-label">⚠ ${esc(m.label)}</div>
+      <div class="perms-item-detail">${esc(m.detail)}</div>
+    </div>
+  `).join('');
+
+  if (!p.idb) {
+    permsList.innerHTML += `
+      <div class="perms-item">
+        <div class="perms-item-label">ℹ idb not found</div>
+        <div class="perms-item-detail">brew tap facebook/fb && brew install idb-companion</div>
+      </div>
+    `;
+  }
+
+  permsToggle.onclick = () => {
+    permsOpen = !permsOpen;
+    permsBody.classList.toggle('open', permsOpen);
+    permsToggle.classList.toggle('open', permsOpen);
+  };
+}
+
 // ── Device list ──────────────────────────────────────────────────────────────
 async function loadSims() {
   deviceList.innerHTML = '<div class="device-list-empty">Scanning…</div>';
@@ -65,6 +116,8 @@ async function loadSims() {
       modeBadge.textContent = fast ? 'fast' : 'compat';
       modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
     }
+
+    renderPermsWidget(info);
 
     if (info.bundle_id) {
       projFilterWrap.classList.add('visible');
