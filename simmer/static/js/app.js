@@ -321,7 +321,7 @@ function renderDeviceList() {
   const filterOn = projFilter.checked;
   const sims = filterOn ? allSims.filter(s => s.project_app) : allSims;
   const adbHint = !hasAdb
-    ? '<div class="device-list-hint">🤖 <span>No <code>adb</code> — install <code>android-platform-tools</code> for Android</span></div>'
+    ? '<div class="device-list-hint">🤖 <span>No <code>adb</code> — install Android Studio for Android</span></div>'
     : '';
 
   // Booting-but-not-yet-running rows

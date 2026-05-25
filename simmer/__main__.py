@@ -1,6 +1,9 @@
 import argparse
 import asyncio
 import os
+import signal
+import subprocess
+import time
 
 from .backend_base import (
     detect_bundle_id,
@@ -46,7 +49,7 @@ def _select_backend(mode: str):
 
         backends.append(backend_adb.AdbBackend())
     else:
-        print("Android emulators: install android-platform-tools for adb support")
+        print("Android emulators: install Android Studio for adb support")
 
     if len(backends) == 1:
         return ios
@@ -56,11 +59,46 @@ def _select_backend(mode: str):
     return MultiBackend(backends)
 
 
-def main() -> None:
+def _kill_port(port: int) -> int:
+    try:
+        result = subprocess.run(
+            ["lsof", f"-tiTCP:{port}", "-sTCP:LISTEN"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except Exception:
+        return 0
+
+    pids = [int(p) for p in result.stdout.split() if p.isdigit()]
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+    if pids:
+        time.sleep(0.2)
+
+    for pid in pids:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            continue
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    return len(pids)
+
+
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Stream iOS Simulator to iPad browser")
     parser.add_argument("--port", type=int, default=4040)
     parser.add_argument("--fps", type=int, default=15)
     parser.add_argument("--quality", type=int, default=70)
+    parser.add_argument("--kill", action="store_true", help="stop the simmer instance listening on --port")
     parser.add_argument(
         "--mode",
         choices=["auto", "fast", "compat"],
@@ -72,7 +110,12 @@ def main() -> None:
         default=None,
         help="Project directory for Xcode bundle ID detection and terminal CWD (default: CWD)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    if args.kill:
+        count = _kill_port(args.port)
+        print(f"Stopped {count} simmer process{'es' if count != 1 else ''}.")
+        return
 
     backend = _select_backend(args.mode)
     project_dir = args.project_dir or os.getcwd()

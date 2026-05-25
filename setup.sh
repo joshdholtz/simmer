@@ -125,7 +125,8 @@ elif [ "$HAS_IDB" = "1" ]; then
   warn "  (add Terminal or your Python binary, then re-run this script)"
 else
   fail "No working backend detected"
-  fail "idb import failed even after install — try: $PYTHON -m pip install --force-re
+  fail "idb import failed even after install — try: $PYTHON -m pip install --force-reinstall fb-idb"
+  exit 1
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
