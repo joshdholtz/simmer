@@ -79,8 +79,9 @@ simmer
 simmer --port 8080     # custom port (default: 4040)
 simmer --fps 30        # capture frame rate (default: 15)
 simmer --quality 80    # JPEG quality 10–95 (default: 70)
-simmer --mode fast     # force Quartz backend
-simmer --mode compat   # force simctl+idb backend
+simmer --mode fast     # force Quartz backend (iOS)
+simmer --mode compat   # force simctl+idb backend (iOS)
+simmer --mode android  # Android emulators via adb
 simmer --kill          # stop a running instance
 ```
 

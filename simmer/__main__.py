@@ -2,11 +2,14 @@ import argparse
 import asyncio
 import os
 
-from .backend_base import detect_bundle_id, has_accessibility, has_idb, has_screen_recording
+from .backend_base import detect_bundle_id, has_accessibility, has_idb, has_screen_recording, has_adb
 from .server import run
 
 
 def _select_backend(mode: str):
+    if mode == "android":
+        from . import backend_adb
+        return backend_adb.AdbBackend()
     if mode == "fast":
         from . import backend_quartz
         return backend_quartz
@@ -39,9 +42,9 @@ def main() -> None:
     parser.add_argument("--quality", type=int, default=70)
     parser.add_argument(
         "--mode",
-        choices=["auto", "fast", "compat"],
+        choices=["auto", "fast", "compat", "android"],
         default="auto",
-        help="auto: detect best backend | fast: Quartz (needs permissions) | compat: simctl+idb",
+        help="auto | fast: Quartz | compat: simctl+idb | android: adb emulators",
     )
     parser.add_argument(
         "--project-dir",

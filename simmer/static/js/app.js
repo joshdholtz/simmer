@@ -54,6 +54,7 @@ function simIcon(name) {
   if (n.includes('watch'))  return '⌚';
   if (n.includes('tv'))     return '📺';
   if (n.includes('vision')) return '🥽';
+  if (n.includes('pixel') || n.includes('nexus') || n.includes('android') || n.includes('emulator')) return '🤖';
   return '📱';
 }
 

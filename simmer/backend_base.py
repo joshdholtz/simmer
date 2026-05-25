@@ -50,6 +50,9 @@ def has_accessibility() -> bool:
 def has_idb() -> bool:
     return shutil.which("idb") is not None
 
+def has_adb() -> bool:
+    return shutil.which("adb") is not None
+
 
 def detect_bundle_id(project_dir: Optional[str] = None) -> Optional[str]:
     root = Path(project_dir).expanduser().resolve() if project_dir else Path.cwd()

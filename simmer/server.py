@@ -325,7 +325,7 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
         await ws.send_str(json.dumps({"type": "rotated"}))
 
     # simctl returns portrait-sized JPEGs regardless of device orientation; rotate server-side.
-    _needs_rotation = "simctl" in backend.name
+    _needs_rotation = "simctl" in backend.name and "android" not in backend.name
 
     async def frame_loop() -> None:
         send_failures = 0
