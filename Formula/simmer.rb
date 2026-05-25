@@ -4,7 +4,7 @@ class Simmer < Formula
   desc "Stream iOS Simulator to your browser with touch, keyboard, and terminal"
   homepage "https://github.com/joshdholtz/simmer"
   url "https://github.com/joshdholtz/simmer/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "834850a49ca3850e7d4d885b3c7e064f6ec37cc52788081c511688fa94af9826"
+  sha256 "b4778b853a3ec1f3c03c7d6b2d16a2603710c5c6d2f0883aa47b9590b6d19b51"
   license "MIT"
 
   depends_on "python@3.12"
