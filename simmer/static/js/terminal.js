@@ -15,7 +15,8 @@ export class SimTerminal {
       fontSize: 13,
       lineHeight: 1.4,
       cursorBlink: true,
-      scrollback: 10000,
+      scrollback: 5000,
+      scrollOnUserInput: false, // don't jump to bottom mid-scroll
       allowProposedApi: true,
       theme: {
         background:          '#18181b',

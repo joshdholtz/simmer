@@ -127,7 +127,7 @@
   display: none;
   flex-direction: column;
   overflow: hidden;
-  padding: var(--sp-2) var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-2) env(safe-area-inset-bottom, 0px);
 }
 .term-pane.active { display: flex; }
 

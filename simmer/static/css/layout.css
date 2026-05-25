@@ -34,6 +34,7 @@ html, body {
   border-right: 1px solid var(--border-subtle);
   overflow: hidden;
   padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
   z-index: 10;
 }
 
@@ -94,6 +95,7 @@ html, body {
   display: flex;
   flex-direction: column; /* viewport on top, terminal on bottom */
   overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* When terminal is pinned to the right side */
@@ -118,6 +120,11 @@ html, body {
   flex-direction: row;
   min-height: 0;
   overflow: hidden;
+  padding-right: env(safe-area-inset-right, 0px);
+}
+/* Terminal covers the right edge when pinned */
+#content.pinned-right #sim-panels {
+  padding-right: 0;
 }
 
 /* Individual simulator panel */
@@ -174,6 +181,7 @@ html, body {
   border-top: none;
   border-left: 1px solid var(--border);
   flex-direction: row;
+  padding-right: env(safe-area-inset-right, 0px);
 }
 #content.pinned-right #terminal-panel.closed {
   width: 0 !important;
@@ -199,16 +207,18 @@ html, body {
   left: 0;
   right: 0;
   border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ── Bottom tab bar ── */
 #bottom-tab-bar {
   flex-shrink: 0;
-  height: 30px;
+  min-height: 30px;
   display: flex;
   align-items: stretch;
   background: var(--bg-elevated);
   border-top: 1px solid var(--border-subtle);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Hide when terminal is pinned to the side (it's already visible there) */

@@ -8,6 +8,7 @@ import shutil
 import struct
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Optional
 
 from .backend_base import SimDevice, logical_size
