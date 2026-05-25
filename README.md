@@ -19,7 +19,9 @@ Run `simmer` in your project directory, open a browser, and your iOS Simulator a
 
 ## Why
 
-> I SSH into my Mac mini for most of my development. I wanted to see and interact with my iOS Simulator without needing to be physically at my desk — and I wanted it to work on a plane, from an iPad, with as little latency as possible. Everything else required npm, a cloud account, or didn't have a terminal. So I built this.
+I do most of my dev work SSHed into a Mac mini. I wanted to see my iOS Simulator from wherever I am — on the couch, on a plane, from my iPad — without having to be sitting at my desk. I also really wanted it to work on a plane with minimal latency, which ruled out anything cloud-based.
+
+Everything I found either needed npm, a cloud account, or just didn't have a terminal. So I built this.
 
 ## Features
 
