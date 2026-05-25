@@ -52,8 +52,7 @@ Optional, for the **compat** backend:
 ### Homebrew (recommended)
 
 ```bash
-brew tap joshdholtz/tap
-brew install simmer
+brew install joshdholtz/tap/simmer
 ```
 
 ### From source
