@@ -214,12 +214,12 @@ html, body {
 /* ── Bottom tab bar ── */
 #bottom-tab-bar {
   flex-shrink: 0;
-  min-height: 36px;
+  min-height: 44px;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   background: var(--bg-elevated);
   border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 5px var(--sp-3) calc(5px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Hide when terminal is pinned to the side (it's already visible there) */
@@ -228,13 +228,14 @@ html, body {
 .bottom-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
+  min-height: 32px;
   padding: 0 var(--sp-3);
   background: none;
   border: none;
-  border-top: 2px solid transparent;
+  border-radius: var(--r-md);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   font-family: var(--font-sans);
   cursor: pointer;
@@ -244,6 +245,5 @@ html, body {
 .bottom-tab:hover  { color: var(--text-primary); background: var(--bg-overlay); }
 .bottom-tab.active {
   color: var(--accent);
-  border-top-color: var(--accent);
   background: var(--accent-bg);
 }
