@@ -182,6 +182,39 @@
 .perms-grant-btn:hover { background: rgba(255,159,10,0.18); }
 .perms-grant-btn:disabled { opacity: 0.5; cursor: default; }
 
+.perms-item-path {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: 4px;
+  background: var(--bg-base);
+  border-radius: var(--r-sm);
+  padding: 3px 6px;
+  min-width: 0;
+}
+.perms-path-value {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.perms-copy-btn {
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: color var(--dur-fast);
+}
+.perms-copy-btn:hover { color: var(--text-secondary); }
+
 /* ── Sidebar controls ── */
 .sidebar-btn {
   display: flex;

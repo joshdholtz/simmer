@@ -88,24 +88,35 @@ function renderPermsWidget(info) {
 
   permsWidget.classList.remove('hidden');
 
+  const binPath = info.binary_path || '';
   permsList.innerHTML = missing.map(m => `
     <div class="perms-item">
       <div class="perms-item-top">
         <span class="perms-item-label">${esc(m.label)}</span>
-        <button class="perms-grant-btn" data-perm="${esc(m.key)}">Grant</button>
+        <button class="perms-grant-btn" data-perm="${esc(m.key)}">Open Settings</button>
       </div>
       <div class="perms-item-detail">${esc(m.detail)}</div>
+      ${binPath ? `<div class="perms-item-path">
+        <span class="perms-path-value">${esc(binPath)}</span>
+        <button class="perms-copy-btn" data-path="${esc(binPath)}" title="Copy path">Copy</button>
+      </div>` : ''}
     </div>
   `).join('');
 
   permsList.querySelectorAll('.perms-grant-btn').forEach(btn => {
     btn.onclick = async () => {
-      btn.textContent = '…';
-      btn.disabled = true;
       await requestPermission(btn.dataset.perm);
       const updated = await fetchInfo();
       renderPermsWidget(updated);
       updateModeBadge(updated);
+    };
+  });
+
+  permsList.querySelectorAll('.perms-copy-btn').forEach(btn => {
+    btn.onclick = () => {
+      navigator.clipboard.writeText(btn.dataset.path);
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
     };
   });
 

@@ -193,6 +193,7 @@ async def _info(request: web.Request) -> web.Response:
         "accessibility": has_accessibility(),
         "idb": has_idb(),
     }
+    info["binary_path"] = _binary_path()
     return web.json_response(info)
 
 
@@ -205,6 +206,7 @@ async def _request_permissions(request: web.Request) -> web.Response:
     return web.json_response({
         "screen_recording": has_screen_recording(),
         "accessibility": has_accessibility(),
+        "binary_path": _binary_path(),
     })
 
 
@@ -218,6 +220,12 @@ def _do_request_permissions(perm: str) -> None:
     if url:
         import subprocess
         subprocess.Popen(["open", url])
+
+def _binary_path() -> str:
+    import sys, shutil
+    if getattr(sys, 'frozen', False):
+        return sys.executable
+    return shutil.which("simmer") or sys.executable
 
 
 async def _run(fn, *args):
