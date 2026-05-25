@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
+
+      - name: Get tarball sha256
+        id: sha
+        run: |
+          VERSION="${{ github.ref_name }}"
+          URL="https://github.com/joshdholtz/simmer/archive/refs/tags/${VERSION}.tar.gz"
+          SHA=$(curl -sL "$URL" | shasum -a 256 | awk '{print $1}')
+          echo "sha256=$SHA" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew formula in tap
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.sha.outputs.version }}"
+          SHA="${{ steps.sha.outputs.sha256 }}"
+          URL="${{ steps.sha.outputs.url }}"
+
+          # Clone the tap
+          git clone https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/joshdholtz/homebrew-tap.git /tmp/homebrew-tap
+
+          # Copy formula and update url + sha256
+          cp Formula/simmer.rb /tmp/homebrew-tap/simmer.rb
+          sed -i '' \
+            -e "s|url \"https://github.com/joshdholtz/simmer/archive/refs/tags/.*\"|url \"${URL}\"|" \
+            -e "s|sha256 \".*\" # fill in.*|sha256 \"${SHA}\"|" \
+            -e "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${SHA}\"|" \
+            /tmp/homebrew-tap/simmer.rb || \
+          sed -i \
+            -e "s|url \"https://github.com/joshdholtz/simmer/archive/refs/tags/.*\"|url \"${URL}\"|" \
+            -e "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${SHA}\"|" \
+            /tmp/homebrew-tap/simmer.rb
+
+          cd /tmp/homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add simmer.rb
+          git commit -m "simmer ${{ github.ref_name }}"
+          git push
