@@ -357,6 +357,7 @@ function addSimPanel(udid, name, w, h) {
 
   setFocusedPanel(udid);
   renderDeviceList();
+  saveSession();
 }
 
 function removeSimPanel(udid) {
@@ -377,6 +378,7 @@ function removeSimPanel(udid) {
 
   if (!simPanels.size) emptyState.classList.remove('hidden');
   renderDeviceList();
+  saveSession();
 }
 
 // Corner radius in logical points for each device class.
@@ -555,15 +557,18 @@ function createPill(udid) {
 fpsSlider.addEventListener('input', () => {
   fpsVal.textContent = fpsSlider.value;
   simPanels.forEach(p => p.stream?.updateSettings({ fps: parseInt(fpsSlider.value) }));
+  saveSession();
 });
 qualSlider.addEventListener('input', () => {
   qualVal.textContent = qualSlider.value;
   simPanels.forEach(p => p.stream?.updateSettings({ quality: parseInt(qualSlider.value) }));
+  saveSession();
 });
 dsBtn.addEventListener('click', () => {
   const on = dsBtn.classList.toggle('active');
   dsBtn.textContent = on ? 'Data Saver: On' : 'Data Saver';
   simPanels.forEach(p => p.stream?.updateSettings({ data_saver: on }));
+  saveSession();
 });
 projFilter.addEventListener('change', renderDeviceList);
 $('btn-refresh').addEventListener('click', loadSims);
@@ -678,6 +683,7 @@ function setTermOpen(open) {
   }, { once: true });
 
   if (open && !termTabs.length) addTermTab();
+  saveSession();
 }
 
 $('btn-terminal').addEventListener('click', () => setTermOpen(!termOpen));
@@ -696,6 +702,7 @@ $('btn-pin-term').addEventListener('click', () => {
     termPanel.style.height = '300px';
   }
 
+  saveSession();
   requestAnimationFrame(() => {
     termTabs.find(t => t.id === activeTermTabId)?.terminal.fit();
     simPanels.forEach(p => sizeFrame(p));
@@ -723,6 +730,7 @@ $('btn-pin-term').addEventListener('click', () => {
     handle.addEventListener('pointerup', () => {
       handle.removeEventListener('pointermove', onMove);
       termTabs.find(t => t.id === activeTermTabId)?.terminal.fit();
+      saveSession();
     }, { once: true });
   });
 
@@ -747,11 +755,63 @@ new ResizeObserver(() => {
   simPanels.forEach(p => sizeFrame(p));
 }).observe(termPanel);
 
-// ── Boot ─────────────────────────────────────────────────────────────────────
+// ── Session persistence ───────────────────────────────────────────────────────
+const _SESSION_KEY = 'simmerSession';
+
+function saveSession() {
+  const pinned = termPinned;
+  try {
+    localStorage.setItem(_SESSION_KEY, JSON.stringify({
+      openUdids:   [...simPanels.keys()],
+      termOpen,
+      termPinned:  pinned,
+      termHeight:  pinned ? null : (parseInt(termPanel.style.height) || null),
+      termWidth:   pinned ? (parseInt(termPanel.style.width)  || null) : null,
+      fps:         parseInt(fpsSlider.value),
+      quality:     parseInt(qualSlider.value),
+      dataSaver:   dsBtn.classList.contains('active'),
+    }));
+  } catch { /* storage full or private mode */ }
+}
+
+function restoreSession() {
+  try { return JSON.parse(localStorage.getItem(_SESSION_KEY)); } catch { return null; }
+}
+
+// ── Startup ───────────────────────────────────────────────────────────────────
 const urlUdid = new URLSearchParams(location.search).get('view');
 loadSims().then(() => {
   if (urlUdid) {
     const sim = allSims.find(s => s.id === urlUdid);
     if (sim) addSimPanel(sim.id, sim.name, sim.width, sim.height);
+    return;
   }
+
+  const s = restoreSession();
+  if (!s) return;
+
+  // Restore sliders before opening panels so streams pick up the right values
+  if (s.fps)     { fpsSlider.value  = s.fps;     fpsVal.textContent  = s.fps; }
+  if (s.quality) { qualSlider.value = s.quality;  qualVal.textContent = s.quality; }
+  if (s.dataSaver) {
+    dsBtn.classList.add('active');
+    dsBtn.textContent = 'Data Saver: On';
+  }
+
+  // Restore open simulator panels (only those still running)
+  for (const udid of (s.openUdids || [])) {
+    const sim = allSims.find(sim => sim.id === udid);
+    if (sim) addSimPanel(sim.id, sim.name, sim.width, sim.height);
+  }
+
+  // Restore terminal layout first, then open it (so size is set before fit())
+  if (s.termPinned) {
+    termPinned = true;
+    content.classList.add('pinned-right');
+    $('btn-pin-term').classList.add('active');
+    if (s.termWidth) termPanel.style.width = s.termWidth + 'px';
+  } else if (s.termHeight) {
+    termPanel.style.height = s.termHeight + 'px';
+  }
+  if (s.termOpen) setTermOpen(true);
 });
