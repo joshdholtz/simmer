@@ -208,22 +208,16 @@ async def _request_permissions(request: web.Request) -> web.Response:
     })
 
 
+_PREF_URLS = {
+    "screen_recording": "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+    "accessibility":    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+}
+
 def _do_request_permissions(perm: str) -> None:
-    if perm == "screen_recording":
-        try:
-            import Quartz
-            Quartz.CGRequestScreenCaptureAccess()
-        except Exception:
-            pass
-    elif perm == "accessibility":
-        try:
-            import subprocess
-            subprocess.Popen([
-                'open',
-                'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
-            ])
-        except Exception:
-            pass
+    url = _PREF_URLS.get(perm)
+    if url:
+        import subprocess
+        subprocess.Popen(["open", url])
 
 
 async def _run(fn, *args):
