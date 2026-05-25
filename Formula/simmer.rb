@@ -36,9 +36,8 @@ class Simmer < Formula
   end
 
   def install
-    # Build the Swift helper that handles simulator rotation
+    bin.mkpath
     system "swiftc", "-O", "rotate_sim.swift", "-o", "#{bin}/rotate_sim"
-
     virtualenv_install_with_resources
   end
 
