@@ -19,7 +19,7 @@ hidden_imports = (
 )
 
 a = Analysis(
-    ['simmer/__main__.py'],
+    ['_simmer_entry.py'],
     pathex=['.'],
     binaries=[],
     datas=datas,
