@@ -20,7 +20,7 @@ from typing import Any, Optional
 import aiohttp
 from aiohttp import web
 
-from .backend_base import sim_has_app
+from .backend_base import sim_has_app, list_available_devices, boot_sim
 
 STATIC_DIR = Path(str(files(__package__).joinpath("static")))
 
@@ -162,6 +162,8 @@ def make_app(
     app.router.add_get("/", _index)
     app.router.add_get("/api/info", _info)
     app.router.add_get("/api/sims", _sims)
+    app.router.add_get("/api/devices", _devices)
+    app.router.add_post("/api/boot/{udid}", _boot)
     app.router.add_get("/ws/pty", _ws_pty)   # must be before /ws/{udid}
     app.router.add_get("/ws/{udid}", _ws)
     app.router.add_static("/css", STATIC_DIR / "css")
@@ -215,6 +217,17 @@ async def _capture(backend: Any, udid: str, quality: int) -> Optional[bytes]:
         return None
     finally:
         _capture_in_flight[udid] = False
+
+
+async def _devices(request: web.Request) -> web.Response:
+    devices = await _run(list_available_devices)
+    return web.json_response(devices)
+
+
+async def _boot(request: web.Request) -> web.Response:
+    udid = request.match_info["udid"]
+    await _run(boot_sim, udid)
+    return web.json_response({"ok": True})
 
 
 async def _sims(request: web.Request) -> web.Response:

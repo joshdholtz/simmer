@@ -1,5 +1,6 @@
 from __future__ import annotations
 import dataclasses
+import json
 import re
 import shutil
 import subprocess
@@ -67,6 +68,36 @@ def detect_bundle_id(project_dir: Optional[str] = None) -> Optional[str]:
                     continue
                 return bid
     return None
+
+
+def list_available_devices() -> list[dict]:
+    """Return shutdown simulator devices that can be booted."""
+    result = subprocess.run(
+        ["xcrun", "simctl", "list", "devices", "--json"],
+        capture_output=True, text=True, timeout=10,
+    )
+    devices = []
+    for runtime, devs in json.loads(result.stdout).get("devices", {}).items():
+        for dev in devs:
+            if dev.get("state") != "Shutdown":
+                continue
+            if not dev.get("isAvailable", True):
+                continue
+            size = logical_size(dev["name"])
+            if not size:
+                continue
+            devices.append({
+                "id": dev["udid"],
+                "name": dev["name"],
+                "width": size[0],
+                "height": size[1],
+                "runtime": runtime.split(".")[-1].replace("-", " "),
+            })
+    return devices
+
+
+def boot_sim(udid: str) -> None:
+    subprocess.run(["xcrun", "simctl", "boot", udid], capture_output=True, timeout=60)
 
 
 def sim_has_app(udid: str, bundle_id: str) -> bool:

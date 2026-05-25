@@ -61,6 +61,45 @@
   text-align: center;
 }
 
+/* ── Available (bootable) devices ── */
+#available-section { display: none; }
+#available-section.visible { display: block; }
+
+.sidebar-label-available {
+  margin-top: var(--sp-2);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--sp-3);
+}
+
+.device-item-available {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  opacity: 0.6;
+  transition: opacity var(--dur-fast);
+}
+.device-item-available:hover { opacity: 0.85; }
+
+.boot-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 11px;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.boot-btn:hover  { background: rgba(48,209,88,0.12); color: var(--success); border-color: rgba(48,209,88,0.3); }
+.boot-btn:active { opacity: 0.7; }
+.boot-btn.booting { pointer-events: none; opacity: 0.5; }
+
 /* ── Sidebar controls ── */
 .sidebar-btn {
   display: flex;

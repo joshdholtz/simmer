@@ -1,10 +1,12 @@
-import { fetchInfo, fetchSims } from './api.js';
+import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim } from './api.js';
 import { SimStream } from './stream.js';
 import { SimTerminal } from './terminal.js';
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const deviceList     = $('device-list');
+const deviceList        = $('device-list');
+const availableSection  = $('available-section');
+const availableList     = $('available-list');
 const modeBadge      = $('mode-badge');
 const emptyState     = $('empty-state');
 const simPanelsEl    = $('sim-panels');
@@ -55,7 +57,7 @@ function simIcon(name) {
 async function loadSims() {
   deviceList.innerHTML = '<div class="device-list-empty">Scanning…</div>';
   try {
-    const [sims, info] = await Promise.all([fetchSims(), fetchInfo()]);
+    const [sims, info, available] = await Promise.all([fetchSims(), fetchInfo(), fetchAvailableDevices()]);
     allSims = sims;
 
     if (info.mode) {
@@ -73,9 +75,83 @@ async function loadSims() {
     }
 
     renderDeviceList();
+    renderAvailableList(available);
   } catch {
     deviceList.innerHTML = '<div class="device-list-empty">Could not reach server</div>';
   }
+}
+
+// ── Available (bootable) devices ─────────────────────────────────────────────
+let bootingUdids = new Set();
+
+function renderAvailableList(devices) {
+  // Filter out devices already booted
+  const bootedIds = new Set(allSims.map(s => s.id));
+  const available = devices.filter(d => !bootedIds.has(d.id));
+
+  if (!available.length) {
+    availableSection.classList.remove('visible');
+    return;
+  }
+  availableSection.classList.add('visible');
+
+  availableList.innerHTML = available.map(d => `
+    <div class="device-item-available">
+      <span class="device-icon">${simIcon(d.name)}</span>
+      <span class="device-info">
+        <span class="device-name">${esc(d.name)}</span>
+        <span class="device-dims">${d.runtime}</span>
+      </span>
+      <button class="boot-btn${bootingUdids.has(d.id) ? ' booting' : ''}"
+              data-udid="${esc(d.id)}" data-name="${esc(d.name)}"
+              data-w="${d.width}" data-h="${d.height}"
+              title="Boot simulator">
+        ${bootingUdids.has(d.id) ? '…' : '▶'}
+      </button>
+    </div>`).join('');
+
+  availableList.querySelectorAll('.boot-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleBoot(
+      btn.dataset.udid, btn.dataset.name,
+      parseInt(btn.dataset.w), parseInt(btn.dataset.h)
+    ));
+  });
+}
+
+async function handleBoot(udid, name, w, h) {
+  if (bootingUdids.has(udid)) return;
+  bootingUdids.add(udid);
+
+  // Update button immediately
+  const btn = availableList.querySelector(`[data-udid="${CSS.escape(udid)}"]`);
+  if (btn) { btn.textContent = '…'; btn.classList.add('booting'); }
+
+  try {
+    await bootSim(udid);
+  } catch { /* server will handle errors */ }
+
+  // Poll until the sim appears as booted
+  const poll = setInterval(async () => {
+    const sims = await fetchSims().catch(() => []);
+    const booted = sims.find(s => s.id === udid);
+    if (booted) {
+      clearInterval(poll);
+      bootingUdids.delete(udid);
+      allSims = sims;
+      renderDeviceList();
+      // Auto-open the newly booted sim
+      addSimPanel(udid, name, w, h);
+      // Refresh available list
+      const avail = await fetchAvailableDevices().catch(() => []);
+      renderAvailableList(avail);
+    }
+  }, 2000);
+
+  // Safety timeout — stop polling after 90s
+  setTimeout(() => {
+    clearInterval(poll);
+    bootingUdids.delete(udid);
+  }, 90_000);
 }
 
 function renderDeviceList() {
@@ -415,7 +491,11 @@ function activateTermTab(id) {
   activeTermTabId = id;
   termTabs.forEach(t => t.el.classList.toggle('active', t.id === id));
   renderTermTabs();
-  requestAnimationFrame(() => termTabs.find(t => t.id === id)?.terminal.fit());
+  requestAnimationFrame(() => {
+    const tab = termTabs.find(t => t.id === id);
+    tab?.terminal.fit();
+    tab?.terminal.focus();
+  });
 }
 
 function addTermTab() {
@@ -465,7 +545,11 @@ function setTermOpen(open) {
   termPanel.classList.toggle('closed', !open);
   termPanel.addEventListener('transitionend', () => {
     termPanel.classList.remove('animating');
-    if (open) termTabs.find(t => t.id === activeTermTabId)?.terminal.fit();
+    if (open) {
+      const active = termTabs.find(t => t.id === activeTermTabId);
+      active?.terminal.fit();
+      active?.terminal.focus();
+    }
   }, { once: true });
 
   if (open && !termTabs.length) addTermTab();

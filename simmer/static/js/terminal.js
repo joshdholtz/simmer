@@ -50,12 +50,19 @@ export class SimTerminal {
       }
     });
 
-    setTimeout(() => this.#fitAddon.fit(), 20);
+    // Focus terminal on click so keyboard input (including Ctrl+C) always reaches it
+    el.addEventListener('click', () => this.#term.focus());
+
+    setTimeout(() => { this.#fitAddon.fit(); this.#term.focus(); }, 20);
     this.#connect();
   }
 
   fit() {
     this.#fitAddon.fit();
+  }
+
+  focus() {
+    this.#term.focus();
   }
 
   setFontSize(size) {
