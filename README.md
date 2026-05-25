@@ -19,9 +19,9 @@ Run `simmer` in your project directory, open a browser, and your iOS Simulator a
 
 ## Why
 
-I do most of my dev work SSHed into a Mac mini. I wanted to see my iOS Simulator from wherever I am — on the couch, on a plane, from my iPad — without having to be sitting at my desk. I also really wanted it to work on a plane with minimal latency, which ruled out anything cloud-based.
+I do most of my dev work SSHed into a Mac mini. I wanted to see my iOS Simulator from wherever I am. On the couch, on a plane, from my iPad. Without being at my desk.
 
-Nothing out there was simple and local enough, so I built this.
+Nothing out there was simple and local enough so I built this.
 
 ## Features
 
