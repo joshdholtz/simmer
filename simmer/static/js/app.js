@@ -378,6 +378,21 @@ $('kbd-send').addEventListener('click', sendKbdText);
 $('kbd-bs').addEventListener('click',  () => simPanels.get(focusedUdid)?.stream?.send({ type: 'key', key: 'backspace' }));
 $('kbd-ret').addEventListener('click', () => simPanels.get(focusedUdid)?.stream?.send({ type: 'key', key: 'return' }));
 
+// ── Terminal font size ────────────────────────────────────────────────────────
+const FONT_MIN = 9, FONT_MAX = 24;
+let termFontSize = parseInt(localStorage.getItem('termFontSize') || '13');
+
+function applyFontSize(size) {
+  termFontSize = Math.max(FONT_MIN, Math.min(FONT_MAX, size));
+  localStorage.setItem('termFontSize', termFontSize);
+  $('font-size-val').textContent = termFontSize;
+  termTabs.forEach(t => t.terminal.setFontSize(termFontSize));
+}
+
+$('btn-font-dec').addEventListener('click', () => applyFontSize(termFontSize - 1));
+$('btn-font-inc').addEventListener('click', () => applyFontSize(termFontSize + 1));
+$('font-size-val').textContent = termFontSize;
+
 // ── Terminal tabs ─────────────────────────────────────────────────────────────
 function renderTermTabs() {
   termTabsBar.innerHTML = termTabs.map(t => `
@@ -423,6 +438,7 @@ function addTermTab() {
     },
   });
 
+  terminal.setFontSize(termFontSize);
   termTabs.push({ id, label, terminal, el });
   activateTermTab(id);
   renderTermTabs();

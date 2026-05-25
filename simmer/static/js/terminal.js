@@ -58,6 +58,11 @@ export class SimTerminal {
     this.#fitAddon.fit();
   }
 
+  setFontSize(size) {
+    this.#term.options.fontSize = size;
+    this.#fitAddon.fit();
+  }
+
   destroy() {
     this.#closing = true;
     clearTimeout(this.#connectTimer);
