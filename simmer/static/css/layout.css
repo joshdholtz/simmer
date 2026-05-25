@@ -231,8 +231,8 @@ html, body {
   gap: var(--sp-2);
   min-height: 32px;
   padding: 0 var(--sp-3);
-  background: none;
-  border: none;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
   border-radius: var(--r-md);
   color: var(--text-secondary);
   font-size: 13px;
@@ -242,8 +242,9 @@ html, body {
   transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
   white-space: nowrap;
 }
-.bottom-tab:hover  { color: var(--text-primary); background: var(--bg-overlay); }
+.bottom-tab:hover  { color: var(--text-primary); background: var(--bg-active); border-color: var(--border-strong); }
 .bottom-tab.active {
   color: var(--accent);
+  border-color: rgba(10,132,255,0.25);
   background: var(--accent-bg);
 }
