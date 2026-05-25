@@ -39,7 +39,9 @@ _EMULATOR = _find_emulator()
 
 
 def _adb(serial: str, *args, timeout: int = 8) -> subprocess.CompletedProcess:
-    return subprocess.run([_ADB, "-s", serial, *args], capture_output=True, timeout=timeout)
+    return subprocess.run(
+        [_ADB, "-s", serial, *args], capture_output=True, timeout=timeout
+    )
 
 
 def _parse_size(text: str) -> Optional[tuple[int, int]]:
@@ -48,7 +50,6 @@ def _parse_size(text: str) -> Optional[tuple[int, int]]:
         if m:
             return int(m.group(1)), int(m.group(2))
     return None
-
 
 
 def _device_name(serial: str) -> str:
@@ -86,18 +87,20 @@ def list_sims() -> list[SimDevice]:
             continue
         try:
             size_r = _adb(serial, "shell", "wm", "size", timeout=4)
-            size   = _parse_size(size_r.stdout.decode())
+            size = _parse_size(size_r.stdout.decode())
             if not size:
                 continue
             pw, ph = size
             # Store physical pixels directly — screencap returns physical-pixel PNGs
             # so using physical pixels for tap/drag avoids density rounding errors.
-            devices.append(SimDevice(
-                udid=serial,
-                name=_device_name(serial),
-                width=min(pw, ph),
-                height=max(pw, ph),
-            ))
+            devices.append(
+                SimDevice(
+                    udid=serial,
+                    name=_device_name(serial),
+                    width=min(pw, ph),
+                    height=max(pw, ph),
+                )
+            )
         except Exception:
             continue
     return devices
@@ -108,8 +111,10 @@ def list_available_avds() -> list[dict]:
     # Normalize running device names to underscore form to match _EMULATOR -list-avds output
     running = {s.name.replace(" ", "_") for s in list_sims()}
     try:
-        r = subprocess.run([_EMULATOR, "-list-avds"], capture_output=True, text=True, timeout=5)
-        avds = [l.strip() for l in r.stdout.splitlines() if l.strip()]
+        r = subprocess.run(
+            [_EMULATOR, "-list-avds"], capture_output=True, text=True, timeout=5
+        )
+        avds = [line.strip() for line in r.stdout.splitlines() if line.strip()]
     except Exception:
         return []
     return [{"name": a.replace("_", " "), "avd": a} for a in avds if a not in running]
@@ -149,11 +154,30 @@ class AdbBackend:
         except Exception:
             pass
 
-    def drag(self, udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, dev_h: int) -> None:
+    def drag(
+        self,
+        udid: str,
+        nx1: float,
+        ny1: float,
+        nx2: float,
+        ny2: float,
+        dev_w: int,
+        dev_h: int,
+    ) -> None:
         x1, y1 = int(nx1 * dev_w), int(ny1 * dev_h)
         x2, y2 = int(nx2 * dev_w), int(ny2 * dev_h)
         try:
-            _adb(udid, "shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), "300")
+            _adb(
+                udid,
+                "shell",
+                "input",
+                "swipe",
+                str(x1),
+                str(y1),
+                str(x2),
+                str(y2),
+                "300",
+            )
         except Exception:
             pass
 
@@ -166,7 +190,12 @@ class AdbBackend:
                 pass
 
     def text(self, udid: str, t: str) -> None:
-        safe = t.replace("\\", "\\\\").replace(" ", "%s").replace("'", "\\'").replace('"', '\\"')
+        safe = (
+            t.replace("\\", "\\\\")
+            .replace(" ", "%s")
+            .replace("'", "\\'")
+            .replace('"', '\\"')
+        )
         try:
             _adb(udid, "shell", "input", "text", safe)
         except Exception:
@@ -180,10 +209,20 @@ class AdbBackend:
 
     def rotate(self, udid: str) -> None:
         try:
-            r = _adb(udid, "shell", "settings", "get", "system", "user_rotation", timeout=3)
+            r = _adb(
+                udid, "shell", "settings", "get", "system", "user_rotation", timeout=3
+            )
             current = int(r.stdout.decode().strip() or "0")
             next_rot = (current + 1) % 4
-            _adb(udid, "shell", "settings", "put", "system", "user_rotation", str(next_rot))
+            _adb(
+                udid,
+                "shell",
+                "settings",
+                "put",
+                "system",
+                "user_rotation",
+                str(next_rot),
+            )
         except Exception:
             pass
 
@@ -197,12 +236,11 @@ class AdbBackend:
 
 
 _KEYMAP = {
-    "home":    "KEYCODE_HOME",
-    "back":    "KEYCODE_BACK",
-    "return":  "KEYCODE_ENTER",
-    "delete":  "KEYCODE_DEL",
-    "escape":  "KEYCODE_ESCAPE",
-    "space":   "KEYCODE_SPACE",
-    "tab":     "KEYCODE_TAB",
+    "home": "KEYCODE_HOME",
+    "back": "KEYCODE_BACK",
+    "return": "KEYCODE_ENTER",
+    "delete": "KEYCODE_DEL",
+    "escape": "KEYCODE_ESCAPE",
+    "space": "KEYCODE_SPACE",
+    "tab": "KEYCODE_TAB",
 }
-

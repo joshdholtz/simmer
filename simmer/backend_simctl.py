@@ -2,6 +2,7 @@
 No macOS permissions required. Needs idb installed:
   brew tap facebook/fb && brew install idb-companion
 """
+
 from __future__ import annotations
 import json
 import shutil
@@ -20,10 +21,13 @@ _IDB = shutil.which("idb") or "idb"
 
 # ── Sim discovery ──────────────────────────────────────────────────────────────
 
+
 def list_sims() -> list[SimDevice]:
     result = subprocess.run(
         ["xcrun", "simctl", "list", "devices", "--json"],
-        capture_output=True, text=True, timeout=10,
+        capture_output=True,
+        text=True,
+        timeout=10,
     )
     sims = []
     for devices in json.loads(result.stdout).get("devices", {}).values():
@@ -32,7 +36,14 @@ def list_sims() -> list[SimDevice]:
                 continue
             size = logical_size(dev["name"]) or _measure(dev["udid"])
             if size:
-                sims.append(SimDevice(udid=dev["udid"], name=dev["name"], width=size[0], height=size[1]))
+                sims.append(
+                    SimDevice(
+                        udid=dev["udid"],
+                        name=dev["name"],
+                        width=size[0],
+                        height=size[1],
+                    )
+                )
     return sims
 
 
@@ -41,7 +52,9 @@ def _measure(udid: str) -> Optional[tuple[int, int]]:
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         tmp = f.name
     try:
-        r = subprocess.run(["xcrun", "simctl", "io", udid, "screenshot", tmp], capture_output=True)
+        r = subprocess.run(
+            ["xcrun", "simctl", "io", udid, "screenshot", tmp], capture_output=True
+        )
         if r.returncode != 0:
             return None
         data = Path(tmp).read_bytes()
@@ -58,13 +71,15 @@ def _measure(udid: str) -> Optional[tuple[int, int]]:
 
 # ── Capture ────────────────────────────────────────────────────────────────────
 
+
 def capture(udid: str, quality: int = 70) -> Optional[bytes]:
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         tmp = f.name
     try:
         r = subprocess.run(
             ["xcrun", "simctl", "io", udid, "screenshot", "--type", "jpeg", tmp],
-            capture_output=True, timeout=5,
+            capture_output=True,
+            timeout=5,
         )
         if r.returncode != 0:
             return None
@@ -75,6 +90,7 @@ def capture(udid: str, quality: int = 70) -> Optional[bytes]:
 
 # ── Input injection via idb ────────────────────────────────────────────────────
 
+
 def _idb(*args: str) -> None:
     subprocess.run([_IDB, *args], capture_output=True)
 
@@ -83,23 +99,37 @@ def tap(udid: str, nx: float, ny: float, dev_w: int, dev_h: int) -> None:
     _idb("ui", "tap", str(int(nx * dev_w)), str(int(ny * dev_h)), "--udid", udid)
 
 
-def drag(udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, dev_h: int) -> None:
+def drag(
+    udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, dev_h: int
+) -> None:
     _idb(
-        "ui", "swipe",
-        str(int(nx1 * dev_w)), str(int(ny1 * dev_h)),
-        str(int(nx2 * dev_w)), str(int(ny2 * dev_h)),
-        "--udid", udid,
+        "ui",
+        "swipe",
+        str(int(nx1 * dev_w)),
+        str(int(ny1 * dev_h)),
+        str(int(nx2 * dev_w)),
+        str(int(ny2 * dev_h)),
+        "--udid",
+        udid,
     )
 
 
 _KEY_MAP: dict[str, str] = {
-    "backspace": "delete", "delete": "delete",
-    "return": "return", "enter": "return",
-    "tab": "tab", "escape": "escape", "space": "space",
-    "arrowleft": "left", "arrowright": "right",
-    "arrowup": "up", "arrowdown": "down",
-    "home": "home", "end": "end",
-    "pageup": "page_up", "pagedown": "page_down",
+    "backspace": "delete",
+    "delete": "delete",
+    "return": "return",
+    "enter": "return",
+    "tab": "tab",
+    "escape": "escape",
+    "space": "space",
+    "arrowleft": "left",
+    "arrowright": "right",
+    "arrowup": "up",
+    "arrowdown": "down",
+    "home": "home",
+    "end": "end",
+    "pageup": "page_up",
+    "pagedown": "page_down",
 }
 
 
@@ -122,6 +152,7 @@ _ROTATE_LOG = "/tmp/simmer_rotate.log"
 
 def _rlog(*args) -> None:
     import datetime
+
     msg = " ".join(str(a) for a in args)
     line = f"{datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]} {msg}\n"
     print(line, end="", flush=True)
@@ -142,7 +173,8 @@ def rotate(udid: str) -> None:
 
     result = subprocess.run(
         ["xcrun", "simctl", "list", "devices", "--json"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     dev_name = None
     for devices in json.loads(result.stdout).get("devices", {}).values():
@@ -169,11 +201,16 @@ def rotate(udid: str) -> None:
 
     # Find window via Quartz (no Accessibility required)
     window_list = Quartz.CGWindowListCopyWindowInfo(
-        Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
+        Quartz.kCGWindowListOptionOnScreenOnly
+        | Quartz.kCGWindowListExcludeDesktopElements,
         Quartz.kCGNullWindowID,
     )
-    all_sim_wins = [w for w in (window_list or []) if w.get("kCGWindowOwnerName") == "Simulator"]
-    _rlog(f"Simulator windows on screen: {[(w.get('kCGWindowName'), w.get('kCGWindowBounds')) for w in all_sim_wins]}")
+    all_sim_wins = [
+        w for w in (window_list or []) if w.get("kCGWindowOwnerName") == "Simulator"
+    ]
+    _rlog(
+        f"Simulator windows on screen: {[(w.get('kCGWindowName'), w.get('kCGWindowBounds')) for w in all_sim_wins]}"
+    )
 
     win = None
     for w in all_sim_wins:
@@ -181,7 +218,12 @@ def rotate(udid: str) -> None:
             continue
         bounds = w.get("kCGWindowBounds", {})
         if bounds.get("Width", 0) > 100:
-            win = {"x": int(bounds["X"]), "y": int(bounds["Y"]), "width": int(bounds["Width"]), "height": int(bounds["Height"])}
+            win = {
+                "x": int(bounds["X"]),
+                "y": int(bounds["Y"]),
+                "width": int(bounds["Width"]),
+                "height": int(bounds["Height"]),
+            }
             break
 
     _rlog(f"target window: {win}")
@@ -189,12 +231,16 @@ def rotate(udid: str) -> None:
     # Use the compiled Swift helper which has its own Accessibility identity.
     # On first run macOS prompts the user to grant it — one-time setup.
     import shutil
-    from pathlib import Path
+
     # Check PATH first (installed via Homebrew), then fall back to dev repo root
-    helper_path = shutil.which("rotate_sim") or str(Path(__file__).parent.parent / "rotate_sim")
+    helper_path = shutil.which("rotate_sim") or str(
+        Path(__file__).parent.parent / "rotate_sim"
+    )
     helper = Path(helper_path)
     if not helper.exists():
-        _rlog(f"rotate_sim binary not found — run: swiftc rotate_sim.swift -o rotate_sim")
+        _rlog(
+            "rotate_sim binary not found — run: swiftc rotate_sim.swift -o rotate_sim"
+        )
         return
 
     # Pass window center coordinates so the Swift helper can click the right
@@ -209,9 +255,13 @@ def rotate(udid: str) -> None:
     _rlog(f"running {helper} {dev_name!r}")
     r = subprocess.run(
         cmd,
-        capture_output=True, text=True, timeout=8,
+        capture_output=True,
+        text=True,
+        timeout=8,
     )
-    _rlog(f"rotate_sim rc={r.returncode} stdout={r.stdout.strip()!r} stderr={r.stderr.strip()!r}")
+    _rlog(
+        f"rotate_sim rc={r.returncode} stdout={r.stdout.strip()!r} stderr={r.stderr.strip()!r}"
+    )
     if r.returncode == 2:
         print(
             "\n[rotate] rotate_sim needs Accessibility permission.\n"
@@ -224,4 +274,6 @@ def rotate(udid: str) -> None:
 
 
 def appearance(udid: str, mode: str) -> None:
-    subprocess.run(["xcrun", "simctl", "ui", udid, "appearance", mode], capture_output=True)
+    subprocess.run(
+        ["xcrun", "simctl", "ui", udid, "appearance", mode], capture_output=True
+    )

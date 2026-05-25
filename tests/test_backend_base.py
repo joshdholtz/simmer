@@ -1,7 +1,7 @@
 """Tests for backend_base: logical_size, detect_bundle_id, SimDevice."""
+
 from __future__ import annotations
 import textwrap
-from pathlib import Path
 
 import pytest
 
@@ -12,46 +12,50 @@ from simmer.backend_base import logical_size, detect_bundle_id, SimDevice
 # logical_size
 # ---------------------------------------------------------------------------
 
+
 class TestLogicalSize:
     # Exact model matches
-    @pytest.mark.parametrize("name,expected", [
-        ("iPhone 16 Pro Max", (440, 956)),
-        ("iPhone 16 Pro",     (402, 874)),
-        ("iPhone 16 Plus",    (430, 932)),
-        ("iPhone 16e",        (393, 852)),
-        ("iPhone 16",         (393, 852)),
-        ("iPhone 15 Pro Max", (430, 932)),
-        ("iPhone 15 Pro",     (393, 852)),
-        ("iPhone 15 Plus",    (430, 932)),
-        ("iPhone 15",         (393, 852)),
-        ("iPhone 14 Pro Max", (430, 932)),
-        ("iPhone 14 Pro",     (393, 852)),
-        ("iPhone 14 Plus",    (428, 926)),
-        ("iPhone 14",         (390, 844)),
-        ("iPhone 13 mini",    (375, 812)),
-        ("iPhone 13 Pro Max", (428, 926)),
-        ("iPhone 13 Pro",     (390, 844)),
-        ("iPhone 13",         (390, 844)),
-        ("iPhone 12 mini",    (360, 780)),
-        ("iPhone 12 Pro Max", (428, 926)),
-        ("iPhone 12 Pro",     (390, 844)),
-        ("iPhone 12",         (390, 844)),
-        ("iPhone SE (3rd generation)", (375, 667)),
-        ("iPhone 11 Pro Max", (414, 896)),
-        ("iPhone 11 Pro",     (375, 812)),
-        ("iPhone 11",         (414, 896)),
-        ("iPhone XS Max",     (414, 896)),
-        ("iPhone XS",         (375, 812)),
-        ("iPhone XR",         (414, 896)),
-        ("iPhone X",          (375, 812)),
-        ("iPhone 8 Plus",     (414, 736)),
-        ("iPhone 8",          (375, 667)),
-        ("iPad Pro (12.9-inch) (6th generation)", (1024, 1366)),
-        ("iPad Pro (11-inch) (4th generation)",   (834, 1194)),
-        ("iPad Air (5th generation)",             (820, 1180)),
-        ("iPad mini (6th generation)",            (744, 1133)),
-        ("iPad (10th generation)",                (820, 1180)),
-    ])
+    @pytest.mark.parametrize(
+        "name,expected",
+        [
+            ("iPhone 16 Pro Max", (440, 956)),
+            ("iPhone 16 Pro", (402, 874)),
+            ("iPhone 16 Plus", (430, 932)),
+            ("iPhone 16e", (393, 852)),
+            ("iPhone 16", (393, 852)),
+            ("iPhone 15 Pro Max", (430, 932)),
+            ("iPhone 15 Pro", (393, 852)),
+            ("iPhone 15 Plus", (430, 932)),
+            ("iPhone 15", (393, 852)),
+            ("iPhone 14 Pro Max", (430, 932)),
+            ("iPhone 14 Pro", (393, 852)),
+            ("iPhone 14 Plus", (428, 926)),
+            ("iPhone 14", (390, 844)),
+            ("iPhone 13 mini", (375, 812)),
+            ("iPhone 13 Pro Max", (428, 926)),
+            ("iPhone 13 Pro", (390, 844)),
+            ("iPhone 13", (390, 844)),
+            ("iPhone 12 mini", (360, 780)),
+            ("iPhone 12 Pro Max", (428, 926)),
+            ("iPhone 12 Pro", (390, 844)),
+            ("iPhone 12", (390, 844)),
+            ("iPhone SE (3rd generation)", (375, 667)),
+            ("iPhone 11 Pro Max", (414, 896)),
+            ("iPhone 11 Pro", (375, 812)),
+            ("iPhone 11", (414, 896)),
+            ("iPhone XS Max", (414, 896)),
+            ("iPhone XS", (375, 812)),
+            ("iPhone XR", (414, 896)),
+            ("iPhone X", (375, 812)),
+            ("iPhone 8 Plus", (414, 736)),
+            ("iPhone 8", (375, 667)),
+            ("iPad Pro (12.9-inch) (6th generation)", (1024, 1366)),
+            ("iPad Pro (11-inch) (4th generation)", (834, 1194)),
+            ("iPad Air (5th generation)", (820, 1180)),
+            ("iPad mini (6th generation)", (744, 1133)),
+            ("iPad (10th generation)", (820, 1180)),
+        ],
+    )
     def test_known_devices(self, name, expected):
         assert logical_size(name) == expected
 
@@ -67,29 +71,35 @@ class TestLogicalSize:
     def test_longest_prefix_wins(self):
         # "iphone 14 pro max" must not match just "iphone 14 pro" or "iphone 14"
         assert logical_size("iPhone 14 Pro Max") == (430, 932)
-        assert logical_size("iPhone 14 Pro")     == (393, 852)
-        assert logical_size("iPhone 14")         == (390, 844)
+        assert logical_size("iPhone 14 Pro") == (393, 852)
+        assert logical_size("iPhone 14") == (390, 844)
 
     def test_ipad_pro_12_vs_11(self):
         assert logical_size("iPad Pro (12.9-inch)") == (1024, 1366)
-        assert logical_size("iPad Pro (11-inch)")   == (834, 1194)
+        assert logical_size("iPad Pro (11-inch)") == (834, 1194)
 
     def test_iphone_17_future_models(self):
         # Entries added for forward-compatibility
         assert logical_size("iPhone 17 Pro Max") == (440, 956)
-        assert logical_size("iPhone 17 Pro")     == (402, 874)
-        assert logical_size("iPhone 17 Air")     == (393, 852)
-        assert logical_size("iPhone 17")         == (393, 852)
+        assert logical_size("iPhone 17 Pro") == (402, 874)
+        assert logical_size("iPhone 17 Air") == (393, 852)
+        assert logical_size("iPhone 17") == (393, 852)
 
 
 # ---------------------------------------------------------------------------
 # SimDevice
 # ---------------------------------------------------------------------------
 
+
 class TestSimDevice:
     def test_to_dict(self):
         d = SimDevice(udid="U1", name="iPhone 15", width=393, height=852)
-        assert d.to_dict() == {"id": "U1", "name": "iPhone 15", "width": 393, "height": 852}
+        assert d.to_dict() == {
+            "id": "U1",
+            "name": "iPhone 15",
+            "width": 393,
+            "height": 852,
+        }
 
     def test_to_dict_android_physical_pixels(self):
         # Android devices store physical pixels — large numbers are valid
@@ -102,15 +112,18 @@ class TestSimDevice:
 # detect_bundle_id
 # ---------------------------------------------------------------------------
 
+
 class TestDetectBundleId:
     def test_finds_bundle_id(self, tmp_path):
         xcodeproj = tmp_path / "MyApp.xcodeproj"
         xcodeproj.mkdir()
         pbxproj = xcodeproj / "project.pbxproj"
-        pbxproj.write_text(textwrap.dedent("""\
+        pbxproj.write_text(
+            textwrap.dedent("""\
             PRODUCT_BUNDLE_IDENTIFIER = com.example.MyApp;
             PRODUCT_BUNDLE_IDENTIFIER = com.example.MyAppTests;
-        """))
+        """)
+        )
         result = detect_bundle_id(str(tmp_path))
         assert result == "com.example.MyApp"
 

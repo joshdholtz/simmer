@@ -1,7 +1,7 @@
 """Tests for backend_adb: parsing, coordinate math, text escaping, device routing."""
+
 from __future__ import annotations
-import subprocess
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import patch
 
 import pytest
 
@@ -16,6 +16,7 @@ from conftest import make_completed_process
 # ---------------------------------------------------------------------------
 # _parse_size
 # ---------------------------------------------------------------------------
+
 
 class TestParseSize:
     def test_standard_output(self):
@@ -41,6 +42,7 @@ class TestParseSize:
 # ---------------------------------------------------------------------------
 # _find_adb — prefers SDK over PATH
 # ---------------------------------------------------------------------------
+
 
 class TestFindAdb:
     def test_prefers_sdk_adb_over_path(self, tmp_path):
@@ -87,7 +89,7 @@ class TestListSims:
             mock_run.side_effect = [
                 _DEVICES_RESULT,
                 make_completed_process(stdout=WM_SIZE_1080x2400),  # wm size
-                make_completed_process(stdout=AVD_NAME_OUTPUT),    # emu avd name
+                make_completed_process(stdout=AVD_NAME_OUTPUT),  # emu avd name
             ]
             sims = adb_mod.list_sims()
 
@@ -132,7 +134,7 @@ class TestListSims:
             ]
             sims = adb_mod.list_sims()
 
-        assert sims[0].width == 1080   # min
+        assert sims[0].width == 1080  # min
         assert sims[0].height == 2400  # max
 
     def test_empty_device_list(self):
@@ -153,11 +155,13 @@ class TestListSims:
 # AdbBackend.tap — physical pixel coordinate math (the key gotcha)
 # ---------------------------------------------------------------------------
 
+
 class TestAdbBackendTap:
     """Tap coordinates must be physical pixels with no density conversion."""
 
     def _tap_args(self, nx, ny, dev_w, dev_h):
         captured = []
+
         def fake_adb(serial, *args, **kwargs):
             captured.extend(args)
             return make_completed_process()
@@ -189,18 +193,20 @@ class TestAdbBackendTap:
 
     def test_fractional_truncation(self):
         # int() truncation, not rounding
-        args = self._tap_args(1/3, 1/3, 1080, 2400)
-        assert str(int(1/3 * 1080)) in args
-        assert str(int(1/3 * 2400)) in args
+        args = self._tap_args(1 / 3, 1 / 3, 1080, 2400)
+        assert str(int(1 / 3 * 1080)) in args
+        assert str(int(1 / 3 * 2400)) in args
 
 
 # ---------------------------------------------------------------------------
 # AdbBackend.drag
 # ---------------------------------------------------------------------------
 
+
 class TestAdbBackendDrag:
     def _drag_args(self, nx1, ny1, nx2, ny2, dev_w=1080, dev_h=2400):
         captured = []
+
         def fake_adb(serial, *args, **kwargs):
             captured.extend(args)
             return make_completed_process()
@@ -211,22 +217,24 @@ class TestAdbBackendDrag:
 
     def test_swipe_down(self):
         args = self._drag_args(0.5, 0.2, 0.5, 0.8, 1080, 2400)
-        assert "540" in args   # x1 = x2 = center
-        assert "480" in args   # y1 = int(0.2 * 2400)
+        assert "540" in args  # x1 = x2 = center
+        assert "480" in args  # y1 = int(0.2 * 2400)
         assert "1920" in args  # y2 = int(0.8 * 2400)
 
     def test_includes_duration(self):
         args = self._drag_args(0.0, 0.0, 1.0, 1.0)
-        assert "300" in args   # swipe duration ms
+        assert "300" in args  # swipe duration ms
 
 
 # ---------------------------------------------------------------------------
 # AdbBackend.text — shell escaping
 # ---------------------------------------------------------------------------
 
+
 class TestAdbBackendText:
     def _sent_text(self, input_text):
         captured = []
+
         def fake_adb(serial, *args, **kwargs):
             captured.extend(args)
             return make_completed_process()
@@ -261,9 +269,11 @@ class TestAdbBackendText:
 # AdbBackend.key — keymap
 # ---------------------------------------------------------------------------
 
+
 class TestAdbBackendKey:
     def _sent_keyevent(self, key):
         captured = []
+
         def fake_adb(serial, *args, **kwargs):
             captured.extend(args)
             return make_completed_process()
@@ -272,22 +282,27 @@ class TestAdbBackendKey:
             AdbBackend().key("emulator-5554", key)
         return captured
 
-    @pytest.mark.parametrize("key,expected_code", [
-        ("home",   "KEYCODE_HOME"),
-        ("back",   "KEYCODE_BACK"),
-        ("return", "KEYCODE_ENTER"),
-        ("delete", "KEYCODE_DEL"),
-        ("escape", "KEYCODE_ESCAPE"),
-        ("space",  "KEYCODE_SPACE"),
-        ("tab",    "KEYCODE_TAB"),
-    ])
+    @pytest.mark.parametrize(
+        "key,expected_code",
+        [
+            ("home", "KEYCODE_HOME"),
+            ("back", "KEYCODE_BACK"),
+            ("return", "KEYCODE_ENTER"),
+            ("delete", "KEYCODE_DEL"),
+            ("escape", "KEYCODE_ESCAPE"),
+            ("space", "KEYCODE_SPACE"),
+            ("tab", "KEYCODE_TAB"),
+        ],
+    )
     def test_mapped_keys(self, key, expected_code):
         args = self._sent_keyevent(key)
         assert expected_code in args
 
     def test_unmapped_key_sends_nothing(self):
         called = []
-        with patch.object(adb_mod, "_adb", side_effect=lambda *a, **k: called.append(a)):
+        with patch.object(
+            adb_mod, "_adb", side_effect=lambda *a, **k: called.append(a)
+        ):
             AdbBackend().key("emulator-5554", "unknownkey")
         assert not called
 
@@ -300,9 +315,11 @@ class TestAdbBackendKey:
 # AdbBackend.rotate — cycles 0→1→2→3→0
 # ---------------------------------------------------------------------------
 
+
 class TestAdbBackendRotate:
     def _do_rotate(self, current_rotation):
         sent = []
+
         def fake_adb(serial, *args, **kwargs):
             if "get" in args:
                 r = make_completed_process(stdout=str(current_rotation).encode())
@@ -332,9 +349,11 @@ class TestAdbBackendRotate:
 # AdbBackend.appearance
 # ---------------------------------------------------------------------------
 
+
 class TestAdbBackendAppearance:
     def _night_arg(self, mode):
         captured = []
+
         def fake_adb(serial, *args, **kwargs):
             captured.extend(args)
             return make_completed_process()
@@ -354,18 +373,25 @@ class TestAdbBackendAppearance:
 # list_available_avds — excludes running emulators
 # ---------------------------------------------------------------------------
 
+
 class TestListAvailableAvds:
     def test_excludes_running(self):
         running_serial = "emulator-5554"
         # list_available_avds calls list_sims() then subprocess.run([_EMULATOR, "-list-avds"], text=True)
-        with patch.object(adb_mod, "list_sims", return_value=[
-            __import__("simmer.backend_base", fromlist=["SimDevice"]).SimDevice(
-                udid=running_serial, name="Pixel 7", width=1080, height=2400
-            )
-        ]):
+        with patch.object(
+            adb_mod,
+            "list_sims",
+            return_value=[
+                __import__("simmer.backend_base", fromlist=["SimDevice"]).SimDevice(
+                    udid=running_serial, name="Pixel 7", width=1080, height=2400
+                )
+            ],
+        ):
             with patch("subprocess.run") as mock_run:
                 # text=True → string stdout
-                mock_run.return_value = make_completed_process(stdout="Pixel_7\nPixel_6\n")
+                mock_run.return_value = make_completed_process(
+                    stdout="Pixel_7\nPixel_6\n"
+                )
                 result = adb_mod.list_available_avds()
 
         names = [a["avd"] for a in result]

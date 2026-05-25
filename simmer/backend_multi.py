@@ -21,7 +21,9 @@ class MultiBackend:
     def list_sims(self) -> list[SimDevice]:
         new_map: dict[str, object] = {}
         sims: list[SimDevice] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self._backends)) as ex:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=len(self._backends)
+        ) as ex:
             futures = {ex.submit(b.list_sims): b for b in self._backends}
             for fut, b in futures.items():
                 try:
@@ -49,7 +51,16 @@ class MultiBackend:
     def tap(self, udid: str, nx: float, ny: float, dev_w: int, dev_h: int) -> None:
         self._backend_for(udid).tap(udid, nx, ny, dev_w, dev_h)
 
-    def drag(self, udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, dev_h: int) -> None:
+    def drag(
+        self,
+        udid: str,
+        nx1: float,
+        ny1: float,
+        nx2: float,
+        ny2: float,
+        dev_w: int,
+        dev_h: int,
+    ) -> None:
         self._backend_for(udid).drag(udid, nx1, ny1, nx2, ny2, dev_w, dev_h)
 
     def key(self, udid: str, k: str) -> None:

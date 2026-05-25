@@ -23,7 +23,8 @@ from aiohttp import web
 from .backend_base import sim_has_app, list_available_devices, boot_sim
 
 import sys as _sys
-if getattr(_sys, 'frozen', False):
+
+if getattr(_sys, "frozen", False):
     STATIC_DIR = Path(_sys._MEIPASS) / "simmer" / "static"
 else:
     STATIC_DIR = Path(str(files(__package__).joinpath("static")))
@@ -43,14 +44,16 @@ _active_sim_ws: dict[str, web.WebSocketResponse] = {}
 # Persistent PTY sessions — survive WS disconnects so iPad can reattach.
 # Each entry: {master_fd, proc, buf (bytearray), ws (current client or None), cleanup_task}
 _pty_sessions: dict[str, dict] = {}
-_PTY_BUF_MAX = 64 * 1024   # 64 KB replay buffer sent on reattach
+_PTY_BUF_MAX = 64 * 1024  # 64 KB replay buffer sent on reattach
 _PTY_SESSION_TTL = 30 * 60  # 30 min before idle session is reaped
+
 
 def _is_landscape(udid: str) -> bool:
     """Detect orientation from live Simulator window bounds.
     Uses only Quartz (thread-safe) — no AppKit main-thread requirement.
     """
     import re
+
     try:
         import Quartz
     except ImportError:
@@ -59,20 +62,23 @@ def _is_landscape(udid: str) -> bool:
     # kCGWindowOwnerName is always available without Screen Recording.
     try:
         window_list = Quartz.CGWindowListCopyWindowInfo(
-            Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
+            Quartz.kCGWindowListOptionOnScreenOnly
+            | Quartz.kCGWindowListExcludeDesktopElements,
             Quartz.kCGNullWindowID,
         )
     except (KeyError, AttributeError):
         return False
     sim_wins = []
-    for w in (window_list or []):
+    for w in window_list or []:
         if w.get("kCGWindowOwnerName") != "Simulator":
             continue
         bounds = w.get("kCGWindowBounds", {})
         width, height = bounds.get("Width", 0), bounds.get("Height", 0)
         if width < 100 or height < 100:
             continue
-        sim_wins.append({"x": bounds.get("X", 0), "y": bounds.get("Y", 0), "w": width, "h": height})
+        sim_wins.append(
+            {"x": bounds.get("X", 0), "y": bounds.get("Y", 0), "w": width, "h": height}
+        )
 
     if not sim_wins:
         return False
@@ -81,16 +87,20 @@ def _is_landscape(udid: str) -> bool:
 
     # Multiple windows: use plist WindowCenter to identify this device's window.
     import plistlib
+
     path = Path.home() / "Library/Preferences/com.apple.iphonesimulator.plist"
     try:
         with open(path, "rb") as f:
             plist = plistlib.load(f)
         prefs = plist.get("DevicePreferences", {}).get(udid, {})
-        m = re.match(r'\{([\d.]+),\s*([\d.]+)\}', prefs.get("WindowCenter", ""))
+        m = re.match(r"\{([\d.]+),\s*([\d.]+)\}", prefs.get("WindowCenter", ""))
         if m:
             cx, cy = float(m.group(1)), float(m.group(2))
             for win in sim_wins:
-                if abs(win["x"] + win["w"] / 2 - cx) < 200 and abs(win["y"] + win["h"] / 2 - cy) < 200:
+                if (
+                    abs(win["x"] + win["w"] / 2 - cx) < 200
+                    and abs(win["y"] + win["h"] / 2 - cy) < 200
+                ):
                     return win["w"] > win["h"]
     except Exception:
         pass
@@ -104,6 +114,7 @@ def _rotate_jpeg_ccw90(jpeg_bytes: bytes, quality: int) -> Optional[bytes]:
     try:
         import AppKit
         import Quartz
+
         ns_data = AppKit.NSData.dataWithBytes_length_(jpeg_bytes, len(jpeg_bytes))
         src = Quartz.CGImageSourceCreateWithData(ns_data, None)
         if not src:
@@ -131,9 +142,11 @@ def _rotate_jpeg_ccw90(jpeg_bytes: bytes, quality: int) -> Optional[bytes]:
         dest = Quartz.CGImageDestinationCreateWithData(out, "public.jpeg", 1, None)
         if not dest:
             return None
-        Quartz.CGImageDestinationAddImage(dest, rotated, {
-            Quartz.kCGImageDestinationLossyCompressionQuality: quality / 100.0
-        })
+        Quartz.CGImageDestinationAddImage(
+            dest,
+            rotated,
+            {Quartz.kCGImageDestinationLossyCompressionQuality: quality / 100.0},
+        )
         Quartz.CGImageDestinationFinalize(dest)
         return bytes(out) if len(out) > 0 else None
     except Exception as e:
@@ -173,7 +186,7 @@ def make_app(
     app.router.add_get("/api/devices", _devices)
     app.router.add_post("/api/boot/{udid}", _boot)
     app.router.add_post("/api/boot-avd", _boot_avd)
-    app.router.add_get("/ws/pty", _ws_pty)   # must be before /ws/{udid}
+    app.router.add_get("/ws/pty", _ws_pty)  # must be before /ws/{udid}
     app.router.add_get("/ws/{udid}", _ws)
     app.router.add_static("/css", STATIC_DIR / "css")
     app.router.add_static("/js", STATIC_DIR / "js")
@@ -186,6 +199,7 @@ async def _index(request: web.Request) -> web.FileResponse:
 
 async def _info(request: web.Request) -> web.Response:
     from .backend_base import has_screen_recording, has_accessibility, has_idb, has_adb
+
     info: dict = {"mode": request.app["backend"].name}
     if request.app.get("bundle_id"):
         info["bundle_id"] = request.app["bundle_id"]
@@ -208,27 +222,35 @@ async def _request_permissions(request: web.Request) -> web.Response:
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _do_request_permissions, perm)
     from .backend_base import has_screen_recording, has_accessibility
-    return web.json_response({
-        "screen_recording": has_screen_recording(),
-        "accessibility": has_accessibility(),
-        "binary_path": _binary_path(),
-    })
+
+    return web.json_response(
+        {
+            "screen_recording": has_screen_recording(),
+            "accessibility": has_accessibility(),
+            "binary_path": _binary_path(),
+        }
+    )
 
 
 _PREF_URLS = {
     "screen_recording": "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
-    "accessibility":    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+    "accessibility": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
 }
+
 
 def _do_request_permissions(perm: str) -> None:
     url = _PREF_URLS.get(perm)
     if url:
         import subprocess
+
         subprocess.Popen(["open", url])
 
+
 def _binary_path() -> str:
-    import sys, shutil
-    if getattr(sys, 'frozen', False):
+    import sys
+    import shutil
+
+    if getattr(sys, "frozen", False):
         return sys.executable
     return shutil.which("simmer") or sys.executable
 
@@ -272,13 +294,17 @@ async def _capture(backend: Any, udid: str, quality: int) -> Optional[bytes]:
 
 async def _devices(request: web.Request) -> web.Response:
     from .backend_base import has_adb
+
     ios = await _run(list_available_devices)
     result = [{"platform": "ios", **d} for d in ios]
     if has_adb():
         try:
             from . import backend_adb
+
             avds = await _run(backend_adb.list_available_avds)
-            result += [{"platform": "android", "id": a["avd"], "name": a["name"]} for a in avds]
+            result += [
+                {"platform": "android", "id": a["avd"], "name": a["name"]} for a in avds
+            ]
         except Exception:
             pass
     return web.json_response(result)
@@ -298,6 +324,7 @@ async def _boot_avd(request: web.Request) -> web.Response:
     avd = body.get("avd", "")
     if avd:
         from . import backend_adb
+
         await _run(backend_adb.boot_avd, avd)
     return web.json_response({"ok": True})
 
@@ -309,7 +336,9 @@ async def _sims(request: web.Request) -> web.Response:
     sims = await _run(backend.list_sims)
 
     if bundle_id:
-        flags = await asyncio.gather(*[_run(sim_has_app, s.udid, bundle_id) for s in sims])
+        flags = await asyncio.gather(
+            *[_run(sim_has_app, s.udid, bundle_id) for s in sims]
+        )
     else:
         flags = [False] * len(sims)
 
@@ -331,11 +360,11 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
 
     q = request.rel_url.query
     state = {
-        "fps":        int(q.get("fps", request.app["default_fps"])),
-        "quality":    int(q.get("quality", request.app["default_quality"])),
+        "fps": int(q.get("fps", request.app["default_fps"])),
+        "quality": int(q.get("quality", request.app["default_quality"])),
         "data_saver": q.get("data_saver", "0") == "1",
-        "dev_w":      int(q.get("w", 390)),
-        "dev_h":      int(q.get("h", 844)),
+        "dev_w": int(q.get("w", 390)),
+        "dev_h": int(q.get("h", 844)),
     }
 
     # Evict any zombie handler for this UDID immediately
@@ -351,7 +380,9 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
         await ws.send_str(json.dumps({"type": "rotated"}))
 
     # simctl returns portrait-sized JPEGs regardless of device orientation; rotate server-side.
-    _udid_backend = backend._backend_for(udid) if hasattr(backend, "_backend_for") else backend
+    _udid_backend = (
+        backend._backend_for(udid) if hasattr(backend, "_backend_for") else backend
+    )
     _needs_rotation = "simctl" in getattr(_udid_backend, "name", "")
 
     async def frame_loop() -> None:
@@ -403,7 +434,13 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
     return ws
 
 
-async def _handle_input(data: dict, udid: str, state: dict, backend: Any, ws: Optional[web.WebSocketResponse] = None) -> None:
+async def _handle_input(
+    data: dict,
+    udid: str,
+    state: dict,
+    backend: Any,
+    ws: Optional[web.WebSocketResponse] = None,
+) -> None:
     t = data.get("type")
 
     if t == "settings":
@@ -421,9 +458,20 @@ async def _handle_input(data: dict, udid: str, state: dict, backend: Any, ws: Op
 
     try:
         if t == "tap":
-            await _run(backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"])
+            await _run(
+                backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"]
+            )
         elif t == "drag":
-            await _run(backend.drag, udid, data["x1"], data["y1"], data["x2"], data["y2"], state["dev_w"], state["dev_h"])
+            await _run(
+                backend.drag,
+                udid,
+                data["x1"],
+                data["y1"],
+                data["x2"],
+                data["y2"],
+                state["dev_w"],
+                state["dev_h"],
+            )
         elif t == "key":
             await _run(backend.key, udid, data.get("key", ""))
         elif t == "text":
@@ -514,14 +562,15 @@ async def _pty_cleanup(session_id: str) -> None:
         session["proc"].wait()
     except Exception:
         pass
-    print(f"[pty] session {session_id[:8]} expired after {_PTY_SESSION_TTL//60} min", flush=True)
+    print(
+        f"[pty] session {session_id[:8]} expired after {_PTY_SESSION_TTL // 60} min",
+        flush=True,
+    )
 
 
 async def _ws_pty(request: web.Request) -> web.WebSocketResponse:
     ws = web.WebSocketResponse(heartbeat=20)
     await ws.prepare(request)
-    loop = asyncio.get_running_loop()
-
     session_id = request.rel_url.query.get("session", "")
     session = _pty_sessions.get(session_id)
 
@@ -533,11 +582,15 @@ async def _ws_pty(request: web.Request) -> web.WebSocketResponse:
         shell = os.environ.get("SHELL", "/bin/zsh")
 
         master_fd, slave_fd = pty.openpty()
-        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+        fcntl.ioctl(
+            master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0)
+        )
 
         proc = subprocess.Popen(
             [shell, "-l"],
-            stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
             close_fds=True,
             preexec_fn=os.setsid,
             cwd=cwd,
@@ -546,7 +599,13 @@ async def _ws_pty(request: web.Request) -> web.WebSocketResponse:
         os.close(slave_fd)
 
         session_id = uuid.uuid4().hex
-        session = {"master_fd": master_fd, "proc": proc, "buf": bytearray(), "ws": None, "cleanup_task": None}
+        session = {
+            "master_fd": master_fd,
+            "proc": proc,
+            "buf": bytearray(),
+            "ws": None,
+            "cleanup_task": None,
+        }
         _pty_sessions[session_id] = session
         asyncio.ensure_future(_pty_reader_loop(session_id))
 
@@ -577,7 +636,11 @@ async def _ws_pty(request: web.Request) -> web.WebSocketResponse:
                     cmd = json.loads(msg.data)
                     if cmd.get("type") == "resize":
                         c, r = int(cmd["cols"]), int(cmd["rows"])
-                        fcntl.ioctl(session["master_fd"], termios.TIOCSWINSZ, struct.pack("HHHH", r, c, 0, 0))
+                        fcntl.ioctl(
+                            session["master_fd"],
+                            termios.TIOCSWINSZ,
+                            struct.pack("HHHH", r, c, 0, 0),
+                        )
                         try:
                             os.killpg(os.getpgid(session["proc"].pid), signal.SIGWINCH)
                         except ProcessLookupError:
@@ -620,15 +683,21 @@ def _tailscale_info() -> dict:
 
     if ts_bin:
         try:
-            r = subprocess.run([ts_bin, "ip", "-4"], capture_output=True, text=True, timeout=3)
+            r = subprocess.run(
+                [ts_bin, "ip", "-4"], capture_output=True, text=True, timeout=3
+            )
             if r.returncode == 0 and r.stdout.strip():
                 info["ip"] = r.stdout.strip()
         except Exception:
             pass
         try:
-            r = subprocess.run([ts_bin, "status", "--json"], capture_output=True, text=True, timeout=3)
+            r = subprocess.run(
+                [ts_bin, "status", "--json"], capture_output=True, text=True, timeout=3
+            )
             if r.returncode == 0:
-                dns = json.loads(r.stdout).get("Self", {}).get("DNSName", "").rstrip(".")
+                dns = (
+                    json.loads(r.stdout).get("Self", {}).get("DNSName", "").rstrip(".")
+                )
                 if dns:
                     info["hostname"] = dns
         except Exception:
@@ -637,6 +706,7 @@ def _tailscale_info() -> dict:
     if "ip" not in info:
         try:
             import ipaddress
+
             r = subprocess.run(["ifconfig"], capture_output=True, text=True, timeout=3)
             for line in r.stdout.splitlines():
                 line = line.strip()
@@ -658,6 +728,7 @@ def _tailscale_info() -> dict:
 
 def _which(cmd: str) -> bool:
     import shutil as _shutil
+
     if os.path.isabs(cmd):
         return os.path.isfile(cmd) and os.access(cmd, os.X_OK)
     return _shutil.which(cmd) is not None
@@ -671,7 +742,9 @@ async def run(
     project_dir: Optional[str] = None,
     bundle_id: Optional[str] = None,
 ) -> None:
-    app = make_app(backend, fps=fps, quality=quality, project_dir=project_dir, bundle_id=bundle_id)
+    app = make_app(
+        backend, fps=fps, quality=quality, project_dir=project_dir, bundle_id=bundle_id
+    )
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
@@ -708,7 +781,7 @@ async def run(
     print("─" * 40 + "\n")
 
     # OS-level signal handlers — fire even when the event loop is blocked
-    signal.signal(signal.SIGINT,  lambda *_: os._exit(0))
+    signal.signal(signal.SIGINT, lambda *_: os._exit(0))
     signal.signal(signal.SIGTERM, lambda *_: os._exit(0))
 
     await asyncio.Event().wait()  # run forever

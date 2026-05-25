@@ -1,8 +1,8 @@
 """Tests for MultiBackend: routing, aggregation, error isolation."""
-from __future__ import annotations
-from unittest.mock import MagicMock, call
 
-import pytest
+from __future__ import annotations
+from unittest.mock import MagicMock
+
 
 from simmer.backend_base import SimDevice
 from simmer.backend_multi import MultiBackend
@@ -24,9 +24,12 @@ ANDROID_DEV = SimDevice("emulator-5554", "Pixel 7", 1080, 2400)
 # name property
 # ---------------------------------------------------------------------------
 
+
 class TestMultiBackendName:
     def test_joins_backend_names(self):
-        mb = MultiBackend([make_backend("fast (quartz)"), make_backend("android (adb)")])
+        mb = MultiBackend(
+            [make_backend("fast (quartz)"), make_backend("android (adb)")]
+        )
         assert mb.name == "fast (quartz) + android (adb)"
 
     def test_single_backend(self):
@@ -37,6 +40,7 @@ class TestMultiBackendName:
 # ---------------------------------------------------------------------------
 # list_sims — aggregation and UDID routing
 # ---------------------------------------------------------------------------
+
 
 class TestListSims:
     def test_aggregates_from_all_backends(self):
@@ -95,6 +99,7 @@ class TestListSims:
 # Routing — each call goes to the correct sub-backend
 # ---------------------------------------------------------------------------
 
+
 class TestRouting:
     def setup_method(self):
         self.ios = make_backend("fast", [IOS_DEV])
@@ -119,7 +124,9 @@ class TestRouting:
 
     def test_drag_routes_correctly(self):
         self.mb.drag("ios-udid-1", 0.1, 0.2, 0.9, 0.8, 393, 852)
-        self.ios.drag.assert_called_once_with("ios-udid-1", 0.1, 0.2, 0.9, 0.8, 393, 852)
+        self.ios.drag.assert_called_once_with(
+            "ios-udid-1", 0.1, 0.2, 0.9, 0.8, 393, 852
+        )
 
     def test_key_routes_correctly(self):
         self.mb.key("emulator-5554", "home")
@@ -145,6 +152,7 @@ class TestRouting:
 # ---------------------------------------------------------------------------
 # _backend_for — fallback behaviour
 # ---------------------------------------------------------------------------
+
 
 class TestBackendFor:
     def test_unknown_udid_triggers_refresh_then_falls_back(self):

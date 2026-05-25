@@ -27,10 +27,17 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pyinstaller"]
 test = ["pytest", "pytest-asyncio", "pytest-aiohttp"]
+lint = ["ruff"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
 
 [project.urls]
 Homepage = "https://github.com/joshdholtz/simmer"

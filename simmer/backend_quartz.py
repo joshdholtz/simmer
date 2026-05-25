@@ -1,27 +1,31 @@
 """Fast backend: Quartz window capture + CGEvent injection.
 Requires Screen Recording and Accessibility permissions.
 """
+
 from __future__ import annotations
 import json
 import subprocess
 import time
+from pathlib import Path
 from typing import Optional
 
 import AppKit
 import Quartz
 
-from .backend_base import SimDevice, logical_size
+from .backend_base import SimDevice
 
 name = "fast (Quartz)"
 
 
 # ── Sim discovery ──────────────────────────────────────────────────────────────
 
+
 def _booted_udids() -> dict[str, str]:
     """Returns {device_name: udid} for all booted simulators."""
     result = subprocess.run(
         ["xcrun", "simctl", "list", "devices", "--json"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     out: dict[str, str] = {}
     for devices in json.loads(result.stdout).get("devices", {}).values():
@@ -33,7 +37,8 @@ def _booted_udids() -> dict[str, str]:
 
 def _quartz_windows() -> list[dict]:
     window_list = Quartz.CGWindowListCopyWindowInfo(
-        Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
+        Quartz.kCGWindowListOptionOnScreenOnly
+        | Quartz.kCGWindowListExcludeDesktopElements,
         Quartz.kCGNullWindowID,
     )
     out = []
@@ -50,7 +55,16 @@ def _quartz_windows() -> list[dict]:
         width, height = int(bounds["Width"]), int(bounds["Height"])
         if width < 100 or height < 100:
             continue
-        out.append({"name": name_, "wid": wid, "x": int(bounds["X"]), "y": int(bounds["Y"]), "width": width, "height": height})
+        out.append(
+            {
+                "name": name_,
+                "wid": wid,
+                "x": int(bounds["X"]),
+                "y": int(bounds["Y"]),
+                "width": width,
+                "height": height,
+            }
+        )
     return out
 
 
@@ -59,7 +73,11 @@ def list_sims() -> list[SimDevice]:
     sims = []
     for win in _quartz_windows():
         udid = udids.get(win["name"], f"win_{win['wid']}")
-        sims.append(SimDevice(udid=udid, name=win["name"], width=win["width"], height=win["height"]))
+        sims.append(
+            SimDevice(
+                udid=udid, name=win["name"], width=win["width"], height=win["height"]
+            )
+        )
     return sims
 
 
@@ -73,6 +91,7 @@ def _find_window(udid: str) -> Optional[dict]:
 
 # ── Capture ────────────────────────────────────────────────────────────────────
 
+
 def capture(udid: str, quality: int = 70) -> Optional[bytes]:
     win = _find_window(udid)
     if not win:
@@ -81,7 +100,8 @@ def capture(udid: str, quality: int = 70) -> Optional[bytes]:
         Quartz.CGRectNull,
         Quartz.kCGWindowListOptionIncludingWindow,
         win["wid"],
-        Quartz.kCGWindowImageBoundsIgnoreFraming | Quartz.kCGWindowImageNominalResolution,
+        Quartz.kCGWindowImageBoundsIgnoreFraming
+        | Quartz.kCGWindowImageNominalResolution,
     )
     if image is None:
         return None
@@ -95,6 +115,7 @@ def capture(udid: str, quality: int = 70) -> Optional[bytes]:
 
 # ── Input injection ────────────────────────────────────────────────────────────
 
+
 def _activate() -> None:
     apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_(
         "com.apple.iphonesimulator"
@@ -104,7 +125,9 @@ def _activate() -> None:
 
 
 def _mouse(event_type: int, x: float, y: float) -> None:
-    event = Quartz.CGEventCreateMouseEvent(None, event_type, (x, y), Quartz.kCGMouseButtonLeft)
+    event = Quartz.CGEventCreateMouseEvent(
+        None, event_type, (x, y), Quartz.kCGMouseButtonLeft
+    )
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
 
 
@@ -121,7 +144,17 @@ def tap(udid: str, nx: float, ny: float, dev_w: int, dev_h: int) -> None:
     _mouse(Quartz.kCGEventLeftMouseUp, x, y)
 
 
-def drag(udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, dev_h: int, steps: int = 25, duration: float = 0.3) -> None:
+def drag(
+    udid: str,
+    nx1: float,
+    ny1: float,
+    nx2: float,
+    ny2: float,
+    dev_w: int,
+    dev_h: int,
+    steps: int = 25,
+    duration: float = 0.3,
+) -> None:
     win = _find_window(udid)
     if not win:
         return
@@ -141,9 +174,20 @@ def drag(udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, 
 
 
 _KEY_CODES: dict[str, int] = {
-    "backspace": 51, "delete": 51, "return": 36, "enter": 36, "tab": 48,
-    "escape": 53, "arrowleft": 123, "arrowright": 124, "arrowdown": 125,
-    "arrowup": 126, "home": 115, "end": 119, "pageup": 116, "pagedown": 121,
+    "backspace": 51,
+    "delete": 51,
+    "return": 36,
+    "enter": 36,
+    "tab": 48,
+    "escape": 53,
+    "arrowleft": 123,
+    "arrowright": 124,
+    "arrowdown": 125,
+    "arrowup": 126,
+    "home": 115,
+    "end": 119,
+    "pageup": 116,
+    "pagedown": 121,
 }
 _CMD, _V = 55, 9
 
@@ -180,7 +224,7 @@ def home(udid: str) -> None:
     _H = 4
     flags = Quartz.kCGEventFlagMaskCommand | Quartz.kCGEventFlagMaskShift
     _key_event(_CMD, True)
-    _key_event(56, True)   # left shift
+    _key_event(56, True)  # left shift
     _key_event(_H, True, flags)
     _key_event(_H, False, flags)
     _key_event(56, False)
@@ -192,6 +236,7 @@ _ROTATE_LOG = "/tmp/simmer_rotate.log"
 
 def _rlog(*args) -> None:
     import datetime
+
     msg = " ".join(str(a) for a in args)
     line = f"{datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]} {msg}\n"
     print(line, end="", flush=True)
@@ -230,4 +275,6 @@ def rotate(udid: str) -> None:
 
 
 def appearance(udid: str, mode: str) -> None:
-    subprocess.run(["xcrun", "simctl", "ui", udid, "appearance", mode], capture_output=True)
+    subprocess.run(
+        ["xcrun", "simctl", "ui", udid, "appearance", mode], capture_output=True
+    )

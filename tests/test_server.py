@@ -1,11 +1,10 @@
 """Tests for HTTP routes and input handling in server.py."""
+
 from __future__ import annotations
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from aiohttp import web
-from aiohttp.test_utils import TestClient, TestServer
 
 from simmer.backend_base import SimDevice
 from simmer.server import make_app, _handle_input
@@ -15,7 +14,7 @@ from simmer.server import make_app, _handle_input
 # Fixtures
 # ---------------------------------------------------------------------------
 
-IOS_DEV   = SimDevice("ios-1", "iPhone 15 Pro", 393, 852)
+IOS_DEV = SimDevice("ios-1", "iPhone 15 Pro", 393, 852)
 ANDROID_DEV = SimDevice("emulator-5554", "Pixel 7", 1080, 2400)
 
 
@@ -41,6 +40,7 @@ async def client(aiohttp_client, backend):
 # ---------------------------------------------------------------------------
 # GET /api/info
 # ---------------------------------------------------------------------------
+
 
 class TestInfo:
     async def test_returns_mode(self, client, backend):
@@ -78,6 +78,7 @@ class TestInfo:
 # GET /api/sims
 # ---------------------------------------------------------------------------
 
+
 class TestSims:
     async def test_returns_device_list(self, client, backend):
         resp = await client.get("/api/sims")
@@ -113,11 +114,21 @@ class TestSims:
 # GET /api/devices (available/bootable devices)
 # ---------------------------------------------------------------------------
 
+
 class TestDevices:
     async def test_returns_ios_devices(self, client):
-        with patch("simmer.server.list_available_devices", return_value=[
-            {"id": "U1", "name": "iPhone 15", "width": 393, "height": 852, "runtime": "iOS 17"}
-        ]):
+        with patch(
+            "simmer.server.list_available_devices",
+            return_value=[
+                {
+                    "id": "U1",
+                    "name": "iPhone 15",
+                    "width": 393,
+                    "height": 852,
+                    "runtime": "iOS 17",
+                }
+            ],
+        ):
             with patch("simmer.backend_base.has_adb", return_value=False):
                 resp = await client.get("/api/devices")
         assert resp.status == 200
@@ -128,9 +139,10 @@ class TestDevices:
     async def test_includes_android_when_adb_available(self, client):
         with patch("simmer.server.list_available_devices", return_value=[]):
             with patch("simmer.backend_base.has_adb", return_value=True):
-                with patch("simmer.backend_adb.list_available_avds", return_value=[
-                    {"avd": "Pixel_7", "name": "Pixel 7"}
-                ]):
+                with patch(
+                    "simmer.backend_adb.list_available_avds",
+                    return_value=[{"avd": "Pixel_7", "name": "Pixel 7"}],
+                ):
                     resp = await client.get("/api/devices")
         data = await resp.json()
         android = [d for d in data if d.get("platform") == "android"]
@@ -149,6 +161,7 @@ class TestDevices:
 # POST /api/boot/<udid>
 # ---------------------------------------------------------------------------
 
+
 class TestBoot:
     async def test_boot_calls_boot_sim(self, client):
         with patch("simmer.server.boot_sim") as mock_boot:
@@ -166,6 +179,7 @@ class TestBoot:
 # ---------------------------------------------------------------------------
 # POST /api/boot-avd
 # ---------------------------------------------------------------------------
+
 
 class TestBootAvd:
     async def test_boot_avd_calls_boot_avd(self, client):
@@ -201,12 +215,19 @@ class TestBootAvd:
 # _handle_input — settings update and dispatch
 # ---------------------------------------------------------------------------
 
+
 class TestHandleInput:
     """_handle_input is an async function; test it directly."""
 
     @pytest.fixture
     def state(self):
-        return {"fps": 15, "quality": 70, "data_saver": False, "dev_w": 393, "dev_h": 852}
+        return {
+            "fps": 15,
+            "quality": 70,
+            "data_saver": False,
+            "dev_w": 393,
+            "dev_h": 852,
+        }
 
     @pytest.fixture
     def backend(self):
@@ -237,11 +258,15 @@ class TestHandleInput:
         assert state["quality"] == 95
 
     async def test_settings_data_saver(self, state, backend):
-        await _handle_input({"type": "settings", "data_saver": True}, "u1", state, backend)
+        await _handle_input(
+            {"type": "settings", "data_saver": True}, "u1", state, backend
+        )
         assert state["data_saver"] is True
 
     async def test_settings_dev_dimensions(self, state, backend):
-        await _handle_input({"type": "settings", "dev_w": 1080, "dev_h": 2400}, "u1", state, backend)
+        await _handle_input(
+            {"type": "settings", "dev_w": 1080, "dev_h": 2400}, "u1", state, backend
+        )
         assert state["dev_w"] == 1080
         assert state["dev_h"] == 2400
 
@@ -252,7 +277,9 @@ class TestHandleInput:
     async def test_drag_dispatched(self, state, backend):
         await _handle_input(
             {"type": "drag", "x1": 0.1, "y1": 0.2, "x2": 0.9, "y2": 0.8},
-            "u1", state, backend
+            "u1",
+            state,
+            backend,
         )
         backend.drag.assert_called_once_with("u1", 0.1, 0.2, 0.9, 0.8, 393, 852)
 
@@ -273,7 +300,9 @@ class TestHandleInput:
         backend.rotate.assert_called_once_with("u1")
 
     async def test_appearance_dispatched(self, state, backend):
-        await _handle_input({"type": "appearance", "mode": "dark"}, "u1", state, backend)
+        await _handle_input(
+            {"type": "appearance", "mode": "dark"}, "u1", state, backend
+        )
         backend.appearance.assert_called_once_with("u1", "dark")
 
     async def test_unknown_type_does_not_raise(self, state, backend):
