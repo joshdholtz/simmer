@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import dataclasses
 import json
 import os
@@ -91,15 +92,9 @@ def detect_bundle_id(project_dir: Optional[str] = None) -> Optional[str]:
                 text = pbxproj.read_text(errors="ignore")
             except OSError:
                 continue
-            for m in re.finditer(
-                r'PRODUCT_BUNDLE_IDENTIFIER\s*=\s*([^;"\s]+)\s*;', text
-            ):
+            for m in re.finditer(r'PRODUCT_BUNDLE_IDENTIFIER\s*=\s*([^;"\s]+)\s*;', text):
                 bid = m.group(1).strip()
-                if (
-                    bid.startswith("$(")
-                    or "test" in bid.lower()
-                    or "extension" in bid.lower()
-                ):
+                if bid.startswith("$(") or "test" in bid.lower() or "extension" in bid.lower():
                     continue
                 return bid
     return None

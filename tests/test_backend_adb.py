@@ -1,17 +1,17 @@
 """Tests for backend_adb: parsing, coordinate math, text escaping, device routing."""
 
 from __future__ import annotations
+
 from unittest.mock import patch
 
 import pytest
+from conftest import make_completed_process
 
 import simmer.backend_adb as adb_mod
 from simmer.backend_adb import (
-    _parse_size,
     AdbBackend,
+    _parse_size,
 )
-from conftest import make_completed_process
-
 
 # ---------------------------------------------------------------------------
 # _parse_size
@@ -67,7 +67,9 @@ class TestFindAdb:
 # list_sims — adb output parsing
 # ---------------------------------------------------------------------------
 
-ADB_DEVICES_OUTPUT = "List of devices attached\nemulator-5554\tdevice\nemulator-5556\toffline\n192.168.1.100:5555\tdevice\n"
+ADB_DEVICES_OUTPUT = (
+    "List of devices attached\nemulator-5554\tdevice\nemulator-5556\toffline\n192.168.1.100:5555\tdevice\n"
+)
 
 WM_SIZE_1080x2400 = b"Physical size: 1080x2400\n"
 WM_SIZE_1440x3200 = b"Physical size: 1440x3200\n"
@@ -300,9 +302,7 @@ class TestAdbBackendKey:
 
     def test_unmapped_key_sends_nothing(self):
         called = []
-        with patch.object(
-            adb_mod, "_adb", side_effect=lambda *a, **k: called.append(a)
-        ):
+        with patch.object(adb_mod, "_adb", side_effect=lambda *a, **k: called.append(a)):
             AdbBackend().key("emulator-5554", "unknownkey")
         assert not called
 
@@ -389,9 +389,7 @@ class TestListAvailableAvds:
         ):
             with patch("subprocess.run") as mock_run:
                 # text=True → string stdout
-                mock_run.return_value = make_completed_process(
-                    stdout="Pixel_7\nPixel_6\n"
-                )
+                mock_run.return_value = make_completed_process(stdout="Pixel_7\nPixel_6\n")
                 result = adb_mod.list_available_avds()
 
         names = [a["avd"] for a in result]

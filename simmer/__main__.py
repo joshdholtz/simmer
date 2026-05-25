@@ -5,9 +5,9 @@ import os
 from .backend_base import (
     detect_bundle_id,
     has_accessibility,
+    has_adb,
     has_idb,
     has_screen_recording,
-    has_adb,
 )
 from .server import run
 
@@ -33,9 +33,7 @@ def _select_backend(mode: str):
         ios = backend_simctl
     else:
         print("Warning: Screen Recording/Accessibility not granted and idb not found.")
-        print(
-            "  Fast mode:   grant permissions in System Settings → Privacy & Security"
-        )
+        print("  Fast mode:   grant permissions in System Settings → Privacy & Security")
         print("  Compat mode: brew tap facebook/fb && brew install idb-companion")
         print("Attempting compat mode anyway (capture may fail)...")
         from . import backend_simctl

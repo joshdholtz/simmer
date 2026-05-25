@@ -3,6 +3,7 @@ Requires Screen Recording and Accessibility permissions.
 """
 
 from __future__ import annotations
+
 import json
 import subprocess
 import time
@@ -37,8 +38,7 @@ def _booted_udids() -> dict[str, str]:
 
 def _quartz_windows() -> list[dict]:
     window_list = Quartz.CGWindowListCopyWindowInfo(
-        Quartz.kCGWindowListOptionOnScreenOnly
-        | Quartz.kCGWindowListExcludeDesktopElements,
+        Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
         Quartz.kCGNullWindowID,
     )
     out = []
@@ -73,11 +73,7 @@ def list_sims() -> list[SimDevice]:
     sims = []
     for win in _quartz_windows():
         udid = udids.get(win["name"], f"win_{win['wid']}")
-        sims.append(
-            SimDevice(
-                udid=udid, name=win["name"], width=win["width"], height=win["height"]
-            )
-        )
+        sims.append(SimDevice(udid=udid, name=win["name"], width=win["width"], height=win["height"]))
     return sims
 
 
@@ -100,8 +96,7 @@ def capture(udid: str, quality: int = 70) -> Optional[bytes]:
         Quartz.CGRectNull,
         Quartz.kCGWindowListOptionIncludingWindow,
         win["wid"],
-        Quartz.kCGWindowImageBoundsIgnoreFraming
-        | Quartz.kCGWindowImageNominalResolution,
+        Quartz.kCGWindowImageBoundsIgnoreFraming | Quartz.kCGWindowImageNominalResolution,
     )
     if image is None:
         return None
@@ -117,17 +112,13 @@ def capture(udid: str, quality: int = 70) -> Optional[bytes]:
 
 
 def _activate() -> None:
-    apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_(
-        "com.apple.iphonesimulator"
-    )
+    apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_("com.apple.iphonesimulator")
     if apps:
         apps[0].activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
 
 
 def _mouse(event_type: int, x: float, y: float) -> None:
-    event = Quartz.CGEventCreateMouseEvent(
-        None, event_type, (x, y), Quartz.kCGMouseButtonLeft
-    )
+    event = Quartz.CGEventCreateMouseEvent(None, event_type, (x, y), Quartz.kCGMouseButtonLeft)
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
 
 
@@ -275,6 +266,4 @@ def rotate(udid: str) -> None:
 
 
 def appearance(udid: str, mode: str) -> None:
-    subprocess.run(
-        ["xcrun", "simctl", "ui", udid, "appearance", mode], capture_output=True
-    )
+    subprocess.run(["xcrun", "simctl", "ui", udid, "appearance", mode], capture_output=True)

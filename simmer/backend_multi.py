@@ -1,7 +1,9 @@
 from __future__ import annotations
-import threading
+
 import concurrent.futures
+import threading
 from typing import Optional
+
 from .backend_base import SimDevice
 
 
@@ -21,9 +23,7 @@ class MultiBackend:
     def list_sims(self) -> list[SimDevice]:
         new_map: dict[str, object] = {}
         sims: list[SimDevice] = []
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self._backends)
-        ) as ex:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self._backends)) as ex:
             futures = {ex.submit(b.list_sims): b for b in self._backends}
             for fut, b in futures.items():
                 try:

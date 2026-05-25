@@ -1,14 +1,14 @@
 """Tests for HTTP routes and input handling in server.py."""
 
 from __future__ import annotations
+
 import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from simmer.backend_base import SimDevice
-from simmer.server import make_app, _handle_input
-
+from simmer.server import _handle_input, make_app
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -258,15 +258,11 @@ class TestHandleInput:
         assert state["quality"] == 95
 
     async def test_settings_data_saver(self, state, backend):
-        await _handle_input(
-            {"type": "settings", "data_saver": True}, "u1", state, backend
-        )
+        await _handle_input({"type": "settings", "data_saver": True}, "u1", state, backend)
         assert state["data_saver"] is True
 
     async def test_settings_dev_dimensions(self, state, backend):
-        await _handle_input(
-            {"type": "settings", "dev_w": 1080, "dev_h": 2400}, "u1", state, backend
-        )
+        await _handle_input({"type": "settings", "dev_w": 1080, "dev_h": 2400}, "u1", state, backend)
         assert state["dev_w"] == 1080
         assert state["dev_h"] == 2400
 
@@ -300,9 +296,7 @@ class TestHandleInput:
         backend.rotate.assert_called_once_with("u1")
 
     async def test_appearance_dispatched(self, state, backend):
-        await _handle_input(
-            {"type": "appearance", "mode": "dark"}, "u1", state, backend
-        )
+        await _handle_input({"type": "appearance", "mode": "dark"}, "u1", state, backend)
         backend.appearance.assert_called_once_with("u1", "dark")
 
     async def test_unknown_type_does_not_raise(self, state, backend):

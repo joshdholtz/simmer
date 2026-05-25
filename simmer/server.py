@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import concurrent.futures
 import fcntl
@@ -11,6 +12,7 @@ import signal
 import socket
 import struct
 import subprocess
+import sys as _sys
 import termios
 import uuid
 from importlib.resources import files
@@ -20,9 +22,7 @@ from typing import Any, Optional
 import aiohttp
 from aiohttp import web
 
-from .backend_base import sim_has_app, list_available_devices, boot_sim
-
-import sys as _sys
+from .backend_base import boot_sim, list_available_devices, sim_has_app
 
 if getattr(_sys, "frozen", False):
     STATIC_DIR = Path(_sys._MEIPASS) / "simmer" / "static"
@@ -62,8 +62,7 @@ def _is_landscape(udid: str) -> bool:
     # kCGWindowOwnerName is always available without Screen Recording.
     try:
         window_list = Quartz.CGWindowListCopyWindowInfo(
-            Quartz.kCGWindowListOptionOnScreenOnly
-            | Quartz.kCGWindowListExcludeDesktopElements,
+            Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
             Quartz.kCGNullWindowID,
         )
     except (KeyError, AttributeError):
@@ -76,9 +75,7 @@ def _is_landscape(udid: str) -> bool:
         width, height = bounds.get("Width", 0), bounds.get("Height", 0)
         if width < 100 or height < 100:
             continue
-        sim_wins.append(
-            {"x": bounds.get("X", 0), "y": bounds.get("Y", 0), "w": width, "h": height}
-        )
+        sim_wins.append({"x": bounds.get("X", 0), "y": bounds.get("Y", 0), "w": width, "h": height})
 
     if not sim_wins:
         return False
@@ -97,10 +94,7 @@ def _is_landscape(udid: str) -> bool:
         if m:
             cx, cy = float(m.group(1)), float(m.group(2))
             for win in sim_wins:
-                if (
-                    abs(win["x"] + win["w"] / 2 - cx) < 200
-                    and abs(win["y"] + win["h"] / 2 - cy) < 200
-                ):
+                if abs(win["x"] + win["w"] / 2 - cx) < 200 and abs(win["y"] + win["h"] / 2 - cy) < 200:
                     return win["w"] > win["h"]
     except Exception:
         pass
@@ -126,9 +120,7 @@ def _rotate_jpeg_ccw90(jpeg_bytes: bytes, quality: int) -> Optional[bytes]:
         oh = Quartz.CGImageGetHeight(img)
         # Rotated canvas: portrait (ow×oh) → landscape (oh×ow)
         cs = Quartz.CGColorSpaceCreateDeviceRGB()
-        ctx = Quartz.CGBitmapContextCreate(
-            None, oh, ow, 8, oh * 4, cs, Quartz.kCGImageAlphaNoneSkipLast
-        )
+        ctx = Quartz.CGBitmapContextCreate(None, oh, ow, 8, oh * 4, cs, Quartz.kCGImageAlphaNoneSkipLast)
         if not ctx:
             return None
         # CCW 90°: rotate first, then translate so image lands in positive space
@@ -198,7 +190,7 @@ async def _index(request: web.Request) -> web.FileResponse:
 
 
 async def _info(request: web.Request) -> web.Response:
-    from .backend_base import has_screen_recording, has_accessibility, has_idb, has_adb
+    from .backend_base import has_accessibility, has_adb, has_idb, has_screen_recording
 
     info: dict = {"mode": request.app["backend"].name}
     if request.app.get("bundle_id"):
@@ -221,7 +213,7 @@ async def _request_permissions(request: web.Request) -> web.Response:
     perm = body.get("permission")
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _do_request_permissions, perm)
-    from .backend_base import has_screen_recording, has_accessibility
+    from .backend_base import has_accessibility, has_screen_recording
 
     return web.json_response(
         {
@@ -247,8 +239,8 @@ def _do_request_permissions(perm: str) -> None:
 
 
 def _binary_path() -> str:
-    import sys
     import shutil
+    import sys
 
     if getattr(sys, "frozen", False):
         return sys.executable
@@ -302,9 +294,7 @@ async def _devices(request: web.Request) -> web.Response:
             from . import backend_adb
 
             avds = await _run(backend_adb.list_available_avds)
-            result += [
-                {"platform": "android", "id": a["avd"], "name": a["name"]} for a in avds
-            ]
+            result += [{"platform": "android", "id": a["avd"], "name": a["name"]} for a in avds]
         except Exception:
             pass
     return web.json_response(result)
@@ -336,9 +326,7 @@ async def _sims(request: web.Request) -> web.Response:
     sims = await _run(backend.list_sims)
 
     if bundle_id:
-        flags = await asyncio.gather(
-            *[_run(sim_has_app, s.udid, bundle_id) for s in sims]
-        )
+        flags = await asyncio.gather(*[_run(sim_has_app, s.udid, bundle_id) for s in sims])
     else:
         flags = [False] * len(sims)
 
@@ -380,9 +368,7 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
         await ws.send_str(json.dumps({"type": "rotated"}))
 
     # simctl returns portrait-sized JPEGs regardless of device orientation; rotate server-side.
-    _udid_backend = (
-        backend._backend_for(udid) if hasattr(backend, "_backend_for") else backend
-    )
+    _udid_backend = backend._backend_for(udid) if hasattr(backend, "_backend_for") else backend
     _needs_rotation = "simctl" in getattr(_udid_backend, "name", "")
 
     async def frame_loop() -> None:
@@ -458,9 +444,7 @@ async def _handle_input(
 
     try:
         if t == "tap":
-            await _run(
-                backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"]
-            )
+            await _run(backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"])
         elif t == "drag":
             await _run(
                 backend.drag,
@@ -582,9 +566,7 @@ async def _ws_pty(request: web.Request) -> web.WebSocketResponse:
         shell = os.environ.get("SHELL", "/bin/zsh")
 
         master_fd, slave_fd = pty.openpty()
-        fcntl.ioctl(
-            master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0)
-        )
+        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
 
         proc = subprocess.Popen(
             [shell, "-l"],
@@ -683,21 +665,15 @@ def _tailscale_info() -> dict:
 
     if ts_bin:
         try:
-            r = subprocess.run(
-                [ts_bin, "ip", "-4"], capture_output=True, text=True, timeout=3
-            )
+            r = subprocess.run([ts_bin, "ip", "-4"], capture_output=True, text=True, timeout=3)
             if r.returncode == 0 and r.stdout.strip():
                 info["ip"] = r.stdout.strip()
         except Exception:
             pass
         try:
-            r = subprocess.run(
-                [ts_bin, "status", "--json"], capture_output=True, text=True, timeout=3
-            )
+            r = subprocess.run([ts_bin, "status", "--json"], capture_output=True, text=True, timeout=3)
             if r.returncode == 0:
-                dns = (
-                    json.loads(r.stdout).get("Self", {}).get("DNSName", "").rstrip(".")
-                )
+                dns = json.loads(r.stdout).get("Self", {}).get("DNSName", "").rstrip(".")
                 if dns:
                     info["hostname"] = dns
         except Exception:
@@ -742,9 +718,7 @@ async def run(
     project_dir: Optional[str] = None,
     bundle_id: Optional[str] = None,
 ) -> None:
-    app = make_app(
-        backend, fps=fps, quality=quality, project_dir=project_dir, bundle_id=bundle_id
-    )
+    app = make_app(backend, fps=fps, quality=quality, project_dir=project_dir, bundle_id=bundle_id)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)

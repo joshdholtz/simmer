@@ -1,12 +1,12 @@
 """Tests for backend_base: logical_size, detect_bundle_id, SimDevice."""
 
 from __future__ import annotations
+
 import textwrap
 
 import pytest
 
-from simmer.backend_base import logical_size, detect_bundle_id, SimDevice
-
+from simmer.backend_base import SimDevice, detect_bundle_id, logical_size
 
 # ---------------------------------------------------------------------------
 # logical_size
@@ -131,8 +131,7 @@ class TestDetectBundleId:
         xcodeproj = tmp_path / "MyApp.xcodeproj"
         xcodeproj.mkdir()
         (xcodeproj / "project.pbxproj").write_text(
-            "PRODUCT_BUNDLE_IDENTIFIER = com.example.MyAppTests;\n"
-            "PRODUCT_BUNDLE_IDENTIFIER = com.example.MyApp;\n"
+            "PRODUCT_BUNDLE_IDENTIFIER = com.example.MyAppTests;\nPRODUCT_BUNDLE_IDENTIFIER = com.example.MyApp;\n"
         )
         result = detect_bundle_id(str(tmp_path))
         assert result == "com.example.MyApp"
@@ -141,8 +140,7 @@ class TestDetectBundleId:
         xcodeproj = tmp_path / "App.xcodeproj"
         xcodeproj.mkdir()
         (xcodeproj / "project.pbxproj").write_text(
-            "PRODUCT_BUNDLE_IDENTIFIER = com.example.App.extension;\n"
-            "PRODUCT_BUNDLE_IDENTIFIER = com.example.App;\n"
+            "PRODUCT_BUNDLE_IDENTIFIER = com.example.App.extension;\nPRODUCT_BUNDLE_IDENTIFIER = com.example.App;\n"
         )
         assert detect_bundle_id(str(tmp_path)) == "com.example.App"
 

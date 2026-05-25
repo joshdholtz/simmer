@@ -3,9 +3,10 @@
 python3 test_rotate.py
 """
 
-import subprocess
 import json
+import subprocess
 import time
+
 import AppKit
 import ApplicationServices as AS
 
@@ -35,9 +36,7 @@ dev_name = dev["name"]
 print(f"\nTarget: {dev_name!r}  udid={udid[:8]}")
 
 # ── get Simulator AX element ──────────────────────────────────────────────────
-apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_(
-    "com.apple.iphonesimulator"
-)
+apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_("com.apple.iphonesimulator")
 if not apps:
     print("Simulator app not running.")
     exit(1)

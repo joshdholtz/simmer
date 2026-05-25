@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 import re
 import shutil
@@ -39,9 +40,7 @@ _EMULATOR = _find_emulator()
 
 
 def _adb(serial: str, *args, timeout: int = 8) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [_ADB, "-s", serial, *args], capture_output=True, timeout=timeout
-    )
+    return subprocess.run([_ADB, "-s", serial, *args], capture_output=True, timeout=timeout)
 
 
 def _parse_size(text: str) -> Optional[tuple[int, int]]:
@@ -111,9 +110,7 @@ def list_available_avds() -> list[dict]:
     # Normalize running device names to underscore form to match _EMULATOR -list-avds output
     running = {s.name.replace(" ", "_") for s in list_sims()}
     try:
-        r = subprocess.run(
-            [_EMULATOR, "-list-avds"], capture_output=True, text=True, timeout=5
-        )
+        r = subprocess.run([_EMULATOR, "-list-avds"], capture_output=True, text=True, timeout=5)
         avds = [line.strip() for line in r.stdout.splitlines() if line.strip()]
     except Exception:
         return []
@@ -190,12 +187,7 @@ class AdbBackend:
                 pass
 
     def text(self, udid: str, t: str) -> None:
-        safe = (
-            t.replace("\\", "\\\\")
-            .replace(" ", "%s")
-            .replace("'", "\\'")
-            .replace('"', '\\"')
-        )
+        safe = t.replace("\\", "\\\\").replace(" ", "%s").replace("'", "\\'").replace('"', '\\"')
         try:
             _adb(udid, "shell", "input", "text", safe)
         except Exception:
@@ -209,9 +201,7 @@ class AdbBackend:
 
     def rotate(self, udid: str) -> None:
         try:
-            r = _adb(
-                udid, "shell", "settings", "get", "system", "user_rotation", timeout=3
-            )
+            r = _adb(udid, "shell", "settings", "get", "system", "user_rotation", timeout=3)
             current = int(r.stdout.decode().strip() or "0")
             next_rot = (current + 1) % 4
             _adb(

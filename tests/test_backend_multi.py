@@ -1,8 +1,8 @@
 """Tests for MultiBackend: routing, aggregation, error isolation."""
 
 from __future__ import annotations
-from unittest.mock import MagicMock
 
+from unittest.mock import MagicMock
 
 from simmer.backend_base import SimDevice
 from simmer.backend_multi import MultiBackend
@@ -27,9 +27,7 @@ ANDROID_DEV = SimDevice("emulator-5554", "Pixel 7", 1080, 2400)
 
 class TestMultiBackendName:
     def test_joins_backend_names(self):
-        mb = MultiBackend(
-            [make_backend("fast (quartz)"), make_backend("android (adb)")]
-        )
+        mb = MultiBackend([make_backend("fast (quartz)"), make_backend("android (adb)")])
         assert mb.name == "fast (quartz) + android (adb)"
 
     def test_single_backend(self):
@@ -124,9 +122,7 @@ class TestRouting:
 
     def test_drag_routes_correctly(self):
         self.mb.drag("ios-udid-1", 0.1, 0.2, 0.9, 0.8, 393, 852)
-        self.ios.drag.assert_called_once_with(
-            "ios-udid-1", 0.1, 0.2, 0.9, 0.8, 393, 852
-        )
+        self.ios.drag.assert_called_once_with("ios-udid-1", 0.1, 0.2, 0.9, 0.8, 393, 852)
 
     def test_key_routes_correctly(self):
         self.mb.key("emulator-5554", "home")
