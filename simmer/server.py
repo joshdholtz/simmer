@@ -197,9 +197,10 @@ async def _info(request: web.Request) -> web.Response:
 
 
 async def _request_permissions(request: web.Request) -> web.Response:
-    import asyncio
+    body = await request.json()
+    perm = body.get("permission")
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _do_request_permissions)
+    await loop.run_in_executor(None, _do_request_permissions, perm)
     from .backend_base import has_screen_recording, has_accessibility
     return web.json_response({
         "screen_recording": has_screen_recording(),
@@ -207,19 +208,22 @@ async def _request_permissions(request: web.Request) -> web.Response:
     })
 
 
-def _do_request_permissions() -> None:
-    try:
-        import Quartz
-        Quartz.CGRequestScreenCaptureAccess()
-    except Exception:
-        pass
-    try:
-        import ApplicationServices
-        ApplicationServices.AXIsProcessTrustedWithOptions(
-            {ApplicationServices.kAXTrustedCheckOptionPrompt: True}
-        )
-    except Exception:
-        pass
+def _do_request_permissions(perm: str) -> None:
+    if perm == "screen_recording":
+        try:
+            import Quartz
+            Quartz.CGRequestScreenCaptureAccess()
+        except Exception:
+            pass
+    elif perm == "accessibility":
+        try:
+            import subprocess
+            subprocess.Popen([
+                'open',
+                'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+            ])
+        except Exception:
+            pass
 
 
 async def _run(fn, *args):

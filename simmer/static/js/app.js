@@ -1,4 +1,4 @@
-import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim, requestPermissions } from './api.js';
+import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim, requestPermission } from './api.js';
 import { SimStream } from './stream.js';
 import { SimTerminal } from './terminal.js';
 
@@ -57,6 +57,13 @@ function simIcon(name) {
   return '📱';
 }
 
+function updateModeBadge(info) {
+  if (!info.mode) return;
+  const fast = info.mode.startsWith('fast');
+  modeBadge.textContent = fast ? 'fast' : 'compat';
+  modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
+}
+
 // ── Permissions widget ────────────────────────────────────────────────────────
 function renderPermsWidget(info) {
   const p = info.permissions || {};
@@ -64,10 +71,12 @@ function renderPermsWidget(info) {
 
   const missing = [];
   if (!p.screen_recording) missing.push({
+    key: 'screen_recording',
     label: 'Screen Recording',
     detail: 'System Settings → Privacy & Security → Screen Recording',
   });
   if (!p.accessibility) missing.push({
+    key: 'accessibility',
     label: 'Accessibility',
     detail: 'System Settings → Privacy & Security → Accessibility',
   });
@@ -81,25 +90,28 @@ function renderPermsWidget(info) {
 
   permsList.innerHTML = missing.map(m => `
     <div class="perms-item">
-      <div class="perms-item-label">${esc(m.label)}</div>
+      <div class="perms-item-top">
+        <span class="perms-item-label">${esc(m.label)}</span>
+        <button class="perms-grant-btn" data-perm="${esc(m.key)}">Grant</button>
+      </div>
       <div class="perms-item-detail">${esc(m.detail)}</div>
     </div>
   `).join('');
 
-  permsBtn.onclick = async () => {
-    await requestPermissions();
-    const updated = await fetchInfo();
-    renderPermsWidget(updated);
-    if (updated.mode) {
-      const fast = updated.mode.startsWith('fast');
-      modeBadge.textContent = fast ? 'fast' : 'compat';
-      modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
-    }
-    // show manual steps if still not fully granted
-    const p = updated.permissions || {};
-    if (!p.screen_recording || !p.accessibility) {
-      permsBody.classList.add('open');
-    }
+  permsList.querySelectorAll('.perms-grant-btn').forEach(btn => {
+    btn.onclick = async () => {
+      btn.textContent = '…';
+      btn.disabled = true;
+      await requestPermission(btn.dataset.perm);
+      const updated = await fetchInfo();
+      renderPermsWidget(updated);
+      updateModeBadge(updated);
+    };
+  });
+
+  permsBtn.onclick = () => {
+    const open = permsBody.classList.toggle('open');
+    permsBtn.classList.toggle('open', open);
   };
 }
 
@@ -110,12 +122,7 @@ async function loadSims() {
     const [sims, info, available] = await Promise.all([fetchSims(), fetchInfo(), fetchAvailableDevices()]);
     allSims = sims;
 
-    if (info.mode) {
-      const fast = info.mode.startsWith('fast');
-      modeBadge.textContent = fast ? 'fast' : 'compat';
-      modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
-    }
-
+    updateModeBadge(info);
     renderPermsWidget(info);
 
     if (info.bundle_id) {
@@ -318,6 +325,16 @@ function removeSimPanel(udid) {
   renderDeviceList();
 }
 
+// Corner radius in logical points for each device class.
+// Matches UIScreen.cornerRadius on the actual device at 1× logical resolution.
+function deviceCornerRadius(w, h) {
+  const short = Math.min(w, h);
+  if (short >= 744) return 18;   // iPad — all models
+  if (short <= 320) return 4;    // iPhone SE 1st gen
+  if (short <= 375) return 39;   // iPhone X / SE 2nd–3rd gen era
+  return 47;                     // iPhone 12 and later (larger radius)
+}
+
 function sizeFrame(panel) {
   const { panelEl, frameEl, canvasEl } = panel;
   const rect = panelEl.getBoundingClientRect();
@@ -327,6 +344,8 @@ function sizeFrame(panel) {
   const scale  = Math.min(availW / canvasEl.width, availH / canvasEl.height);
   frameEl.style.width  = Math.round(canvasEl.width  * scale) + 'px';
   frameEl.style.height = Math.round(canvasEl.height * scale) + 'px';
+  const r = Math.round(deviceCornerRadius(canvasEl.width, canvasEl.height) * scale);
+  frameEl.style.borderRadius = r + 'px';
 }
 
 // ── Dividers between panels ───────────────────────────────────────────────────
