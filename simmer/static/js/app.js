@@ -727,7 +727,17 @@ function closeTermTab(id) {
   termTabs[idx].el.remove();
   termTabs.splice(idx, 1);
 
-  if (!termTabs.length) { setTermOpen(false); return; }
+  if (!termTabs.length) {
+    if (termPinned) {
+      termPinned = false;
+      content.classList.remove('pinned-right');
+      $('btn-pin-term').classList.remove('active');
+      termPanel.style.width = '';
+      termPanel.style.height = '300px';
+    }
+    setTermOpen(false);
+    return;
+  }
   if (activeTermTabId === id) activateTermTab(termTabs[Math.max(0, idx - 1)].id);
   renderTermTabs();
 }

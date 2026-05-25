@@ -214,11 +214,11 @@ html, body {
 /* ── Bottom tab bar ── */
 #bottom-tab-bar {
   flex-shrink: 0;
-  min-height: 30px;
+  min-height: 36px;
   display: flex;
   align-items: stretch;
   background: var(--bg-elevated);
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -228,12 +228,12 @@ html, body {
 .bottom-tab {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 0 var(--sp-3);
   background: none;
   border: none;
   border-top: 2px solid transparent;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   font-family: var(--font-sans);
@@ -242,4 +242,8 @@ html, body {
   white-space: nowrap;
 }
 .bottom-tab:hover  { color: var(--text-primary); background: var(--bg-overlay); }
-.bottom-tab.active { color: var(--accent); border-top-color: var(--accent); }
+.bottom-tab.active {
+  color: var(--accent);
+  border-top-color: var(--accent);
+  background: var(--accent-bg);
+}
