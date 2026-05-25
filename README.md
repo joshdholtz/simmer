@@ -95,6 +95,7 @@ simmer picks the best backend automatically:
 |------|---------|-------|----------|
 | **fast** | Quartz (native) | CGEvent | Screen Recording + Accessibility |
 | **compat** | `simctl screenshot` | `idb` | `idb-companion` |
+| **android** | `adb screencap` | `adb input` | `android-platform-tools` |
 
 The startup log tells you which mode is active and what's needed to upgrade.
 
@@ -113,6 +114,14 @@ brew install idb-companion
 ```
 
 No permissions required; works immediately, lower frame rate.
+
+### Android mode — install adb
+
+```bash
+brew install android-platform-tools
+```
+
+Then start an Android emulator from Android Studio and run `simmer --mode android`. No permissions needed — everything goes through adb.
 
 ## Tips
 
