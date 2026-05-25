@@ -295,6 +295,36 @@ class TestHandleInput:
         await _handle_input({"type": "rotate"}, "u1", state, backend)
         backend.rotate.assert_called_once_with("u1")
 
+    async def test_rotate_sends_client_update_on_success(self, state, backend):
+        class FakeWs:
+            closed = False
+
+            def __init__(self):
+                self.messages = []
+
+            async def send_str(self, msg):
+                self.messages.append(msg)
+
+        ws = FakeWs()
+        backend.rotate.return_value = True
+        await _handle_input({"type": "rotate"}, "u1", state, backend, ws)
+        assert ws.messages
+
+    async def test_rotate_does_not_update_client_on_failure(self, state, backend):
+        class FakeWs:
+            closed = False
+
+            def __init__(self):
+                self.messages = []
+
+            async def send_str(self, msg):
+                self.messages.append(msg)
+
+        ws = FakeWs()
+        backend.rotate.return_value = False
+        await _handle_input({"type": "rotate"}, "u1", state, backend, ws)
+        assert ws.messages == []
+
     async def test_appearance_dispatched(self, state, backend):
         await _handle_input({"type": "appearance", "mode": "dark"}, "u1", state, backend)
         backend.appearance.assert_called_once_with("u1", "dark")

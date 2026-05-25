@@ -69,11 +69,11 @@ class MultiBackend:
     def text(self, udid: str, t: str) -> None:
         self._backend_for(udid).text(udid, t)
 
-    def home(self, udid: str) -> None:
-        self._backend_for(udid).home(udid)
+    def home(self, udid: str) -> bool | None:
+        return self._backend_for(udid).home(udid)
 
-    def rotate(self, udid: str) -> None:
-        self._backend_for(udid).rotate(udid)
+    def rotate(self, udid: str) -> bool | None:
+        return self._backend_for(udid).rotate(udid)
 
     def appearance(self, udid: str, mode: str) -> None:
         self._backend_for(udid).appearance(udid, mode)

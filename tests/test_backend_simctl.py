@@ -35,3 +35,10 @@ class TestSizeForDevice:
         with patch.object(simctl_mod, "_measure") as measure:
             assert simctl_mod._size_for_device("iPhone 15 Pro", "U1") == (393, 852)
         measure.assert_not_called()
+
+
+class TestHome:
+    def test_uses_shared_ios_home_control(self):
+        with patch.object(simctl_mod, "press_home", return_value=True) as press_home:
+            assert simctl_mod.home("U1") is True
+        press_home.assert_called_once_with("U1")

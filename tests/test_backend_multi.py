@@ -133,11 +133,13 @@ class TestRouting:
         self.ios.text.assert_called_once_with("ios-udid-1", "hello")
 
     def test_home_routes_correctly(self):
-        self.mb.home("emulator-5554")
+        self.android.home.return_value = True
+        assert self.mb.home("emulator-5554") is True
         self.android.home.assert_called_once_with("emulator-5554")
 
     def test_rotate_routes_correctly(self):
-        self.mb.rotate("ios-udid-1")
+        self.ios.rotate.return_value = True
+        assert self.mb.rotate("ios-udid-1") is True
         self.ios.rotate.assert_called_once_with("ios-udid-1")
 
     def test_appearance_routes_correctly(self):

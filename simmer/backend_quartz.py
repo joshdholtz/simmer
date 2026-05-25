@@ -14,6 +14,7 @@ import AppKit
 import Quartz
 
 from .backend_base import SimDevice
+from .backend_ios import press_home
 
 name = "fast (Quartz)"
 
@@ -209,9 +210,11 @@ def text(udid: str, t: str) -> None:
     _key_event(_CMD, False)
 
 
-def home(udid: str) -> None:
+def home(udid: str) -> bool:
+    if press_home(udid):
+        return True
     _activate()
-    # Simulator shortcut: Cmd+Shift+H
+    # Last fallback: Simulator shortcut (requires Accessibility).
     _H = 4
     flags = Quartz.kCGEventFlagMaskCommand | Quartz.kCGEventFlagMaskShift
     _key_event(_CMD, True)
@@ -220,6 +223,7 @@ def home(udid: str) -> None:
     _key_event(_H, False, flags)
     _key_event(56, False)
     _key_event(_CMD, False)
+    return True
 
 
 _ROTATE_LOG = "/tmp/simmer_rotate.log"
@@ -235,7 +239,7 @@ def _rlog(*args) -> None:
         f.write(line)
 
 
-def rotate(udid: str) -> None:
+def rotate(udid: str) -> bool:
     Path(_ROTATE_LOG).write_text("")  # clear log at start of each rotate attempt
     win = _find_window(udid)
     _rlog(f"window={'found' if win else 'NOT FOUND'} udid={udid[:8]}")
@@ -263,6 +267,7 @@ def rotate(udid: str) -> None:
     _key_event(LEFT, False, Quartz.kCGEventFlagMaskCommand)
     _key_event(_CMD, False)
     _rlog("Cmd+Left done")
+    return True
 
 
 def appearance(udid: str, mode: str) -> None:

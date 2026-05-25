@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from .backend_base import SimDevice, logical_size
+from .backend_ios import press_home
 
 name = "compat (simctl+idb)"
 
@@ -155,8 +156,8 @@ def text(udid: str, t: str) -> None:
     _idb("text", t, "--udid", udid)
 
 
-def home(udid: str) -> None:
-    _idb("ui", "button", "HOME", "--udid", udid)
+def home(udid: str) -> bool:
+    return press_home(udid)
 
 
 _ROTATE_LOG = "/tmp/simmer_rotate.log"
@@ -175,7 +176,7 @@ def _rlog(*args) -> None:
         pass
 
 
-def rotate(udid: str) -> None:
+def rotate(udid: str) -> bool:
     import time
 
     import AppKit
@@ -199,14 +200,14 @@ def rotate(udid: str) -> None:
             break
     if not dev_name:
         _rlog("udid not found in simctl list")
-        return
+        return False
 
     _rlog(f"dev_name={dev_name!r}")
 
     apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_("com.apple.iphonesimulator")
     if not apps:
         _rlog("Simulator.app not running")
-        return
+        return False
     apps[0].activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
     time.sleep(0.15)
 
@@ -243,7 +244,7 @@ def rotate(udid: str) -> None:
     helper = Path(helper_path)
     if not helper.exists():
         _rlog("rotate_sim binary not found — run: swiftc rotate_sim.swift -o rotate_sim")
-        return
+        return False
 
     # Pass window center coordinates so the Swift helper can click the right
     # window without needing Screen Recording permission itself.
@@ -271,6 +272,7 @@ def rotate(udid: str) -> None:
             flush=True,
         )
     _rlog("done")
+    return r.returncode == 0
 
 
 def appearance(udid: str, mode: str) -> None:

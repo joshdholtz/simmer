@@ -193,18 +193,18 @@ class AdbBackend:
         except Exception:
             pass
 
-    def home(self, udid: str) -> None:
+    def home(self, udid: str) -> bool:
         try:
-            _adb(udid, "shell", "input", "keyevent", "KEYCODE_HOME")
+            return _adb(udid, "shell", "input", "keyevent", "KEYCODE_HOME").returncode == 0
         except Exception:
-            pass
+            return False
 
-    def rotate(self, udid: str) -> None:
+    def rotate(self, udid: str) -> bool:
         try:
             r = _adb(udid, "shell", "settings", "get", "system", "user_rotation", timeout=3)
             current = int(r.stdout.decode().strip() or "0")
             next_rot = (current + 1) % 4
-            _adb(
+            result = _adb(
                 udid,
                 "shell",
                 "settings",
@@ -213,8 +213,9 @@ class AdbBackend:
                 "user_rotation",
                 str(next_rot),
             )
+            return result.returncode == 0
         except Exception:
-            pass
+            return False
 
     def appearance(self, udid: str, mode: str) -> None:
         # Android 10+ supports dark mode via UI mode

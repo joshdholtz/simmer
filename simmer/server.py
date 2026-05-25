@@ -475,8 +475,8 @@ async def _handle_input(
         elif t == "home":
             await _run(backend.home, udid)
         elif t == "rotate":
-            await _run(backend.rotate, udid)
-            if ws and not ws.closed:
+            rotated = await _run(backend.rotate, udid)
+            if rotated is not False and ws and not ws.closed:
                 await ws.send_str(json.dumps({"type": "rotated"}))
         elif t == "appearance":
             await _run(backend.appearance, udid, data.get("mode", "dark"))
