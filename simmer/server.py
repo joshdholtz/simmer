@@ -57,10 +57,13 @@ def _is_landscape(udid: str) -> bool:
         return False
 
     # kCGWindowOwnerName is always available without Screen Recording.
-    window_list = Quartz.CGWindowListCopyWindowInfo(
-        Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
-        Quartz.kCGNullWindowID,
-    )
+    try:
+        window_list = Quartz.CGWindowListCopyWindowInfo(
+            Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
+            Quartz.kCGNullWindowID,
+        )
+    except (KeyError, AttributeError):
+        return False
     sim_wins = []
     for w in (window_list or []):
         if w.get("kCGWindowOwnerName") != "Simulator":
