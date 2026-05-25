@@ -24,7 +24,7 @@ const dsBtn          = $('ds-btn');
 const projFilter     = $('proj-filter');
 const projFilterWrap = $('proj-filter-wrap');
 const permsWidget    = $('perms-widget');
-const permsToggle    = $('perms-toggle');
+const permsBtn       = $('perms-btn');
 const permsBody      = $('perms-body');
 const permsList      = $('perms-list');
 
@@ -58,8 +58,6 @@ function simIcon(name) {
 }
 
 // ── Permissions widget ────────────────────────────────────────────────────────
-let permsOpen = false;
-
 function renderPermsWidget(info) {
   const p = info.permissions || {};
   const isFast = (info.mode || '').startsWith('fast');
@@ -88,20 +86,19 @@ function renderPermsWidget(info) {
     </div>
   `).join('');
 
-  permsToggle.onclick = async () => {
-    permsOpen = !permsOpen;
-    permsBody.classList.toggle('open', permsOpen);
-    permsToggle.classList.toggle('open', permsOpen);
-    if (permsOpen) {
-      await requestPermissions();
-      // re-poll info after dialogs dismissed — update badge + widget
-      const updated = await fetchInfo();
-      renderPermsWidget(updated);
-      if (updated.mode) {
-        const fast = updated.mode.startsWith('fast');
-        modeBadge.textContent = fast ? 'fast' : 'compat';
-        modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
-      }
+  permsBtn.onclick = async () => {
+    await requestPermissions();
+    const updated = await fetchInfo();
+    renderPermsWidget(updated);
+    if (updated.mode) {
+      const fast = updated.mode.startsWith('fast');
+      modeBadge.textContent = fast ? 'fast' : 'compat';
+      modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
+    }
+    // show manual steps if still not fully granted
+    const p = updated.permissions || {};
+    if (!p.screen_recording || !p.accessibility) {
+      permsBody.classList.add('open');
     }
   };
 }
