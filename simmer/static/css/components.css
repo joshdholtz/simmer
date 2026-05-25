@@ -61,44 +61,185 @@
   text-align: center;
 }
 
-/* ── Available (bootable) devices ── */
-#available-section { display: none; }
-#available-section.visible { display: block; }
+.device-list-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  border-top: 1px solid var(--separator);
+}
+.device-list-hint span { line-height: 1.4; }
+.device-list-hint code { font-family: monospace; color: var(--text-secondary); }
 
-.sidebar-label-available {
-  margin-top: var(--sp-2);
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--sp-3);
+/* ── Sidebar label row (label + "+" button) ── */
+.sidebar-label-row {
+  display: flex;
+  align-items: center;
+  padding-right: var(--sp-3);
+}
+.sidebar-label-row .sidebar-label { flex: 1; }
+
+.add-sim-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-tertiary);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+  flex-shrink: 0;
+}
+.add-sim-btn:hover { background: var(--bg-overlay); color: var(--text-primary); border-color: var(--border-strong, var(--border)); }
+
+/* ── Add-simulator popover ── */
+#add-popover {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  /* slide in from left */
+  animation: popover-in var(--dur-slow) var(--ease) both;
+}
+#add-popover.hidden { display: none; }
+
+@keyframes popover-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
-.device-item-available {
+.add-popover-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.add-search {
+  flex: 1;
+  height: 28px;
+  padding: 0 var(--sp-3);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color var(--dur-fast);
+}
+.add-search::placeholder { color: var(--text-tertiary); }
+.add-search:focus { border-color: var(--accent); }
+
+.add-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.add-close-btn:hover { background: var(--bg-overlay); color: var(--text-primary); }
+
+.add-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.add-list::-webkit-scrollbar { width: 4px; }
+.add-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.add-list-empty {
+  padding: var(--sp-6) var(--sp-4);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.add-group { padding-bottom: var(--sp-2); }
+
+.add-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: var(--sp-3) var(--sp-4) var(--sp-1);
+}
+
+.add-device-item {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-4);
-  opacity: 0.6;
-  transition: opacity var(--dur-fast);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-4);
+  transition: background var(--dur-fast);
 }
-.device-item-available:hover { opacity: 0.85; }
+.add-device-item:hover { background: var(--bg-overlay); }
+.add-device-item:hover .add-boot-btn { opacity: 1; }
 
-.boot-btn {
+.add-device-icon { font-size: 18px; flex-shrink: 0; width: 22px; text-align: center; }
+.add-device-info { flex: 1; min-width: 0; }
+.add-device-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+.add-device-sub { font-size: 10px; color: var(--text-tertiary); }
+
+.add-boot-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-  background: var(--bg-overlay);
+  background: none;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   color: var(--text-tertiary);
+  font-size: 10px;
   cursor: pointer;
-  font-size: 11px;
-  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+  opacity: 0;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast);
 }
-.boot-btn:hover  { background: rgba(48,209,88,0.12); color: var(--success); border-color: rgba(48,209,88,0.3); }
-.boot-btn:active { opacity: 0.7; }
-.boot-btn.booting { pointer-events: none; opacity: 0.5; }
+.add-boot-btn:hover  { background: rgba(48,209,88,0.12); color: var(--success); border-color: rgba(48,209,88,0.3); }
+.add-boot-btn:active { opacity: 0.7; }
+.add-boot-btn.booting { opacity: 0.5; pointer-events: none; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.add-spinner {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--text-tertiary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
 
 /* ── Permissions widget ── */
 .perms-widget { display: flex; flex-direction: column; gap: var(--sp-2); }

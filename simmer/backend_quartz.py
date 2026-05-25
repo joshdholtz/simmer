@@ -200,7 +200,7 @@ def _rlog(*args) -> None:
 
 
 def rotate(udid: str) -> None:
-    open(_ROTATE_LOG, "w").close()  # clear log at start of each rotate attempt
+    Path(_ROTATE_LOG).write_text("")  # clear log at start of each rotate attempt
     win = _find_window(udid)
     _rlog(f"window={'found' if win else 'NOT FOUND'} udid={udid[:8]}")
     if win:

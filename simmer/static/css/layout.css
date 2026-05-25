@@ -36,6 +36,7 @@ html, body {
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   z-index: 10;
+  position: relative;
 }
 
 .sidebar-logo {

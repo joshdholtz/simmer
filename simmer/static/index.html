@@ -25,7 +25,10 @@
     </div>
 
     <div class="sidebar-section">
-      <div class="sidebar-label">Simulators</div>
+      <div class="sidebar-label-row">
+        <span class="sidebar-label">Simulators</span>
+        <button id="add-sim-btn" class="add-sim-btn" title="Add simulator">+</button>
+      </div>
       <label id="proj-filter-wrap" class="proj-filter">
         <input type="checkbox" id="proj-filter">
         <span>Project only</span>
@@ -33,10 +36,16 @@
       <div id="device-list">
         <div class="device-list-empty">Loading…</div>
       </div>
-      <div id="available-section">
-        <div class="sidebar-label sidebar-label-available">Available</div>
-        <div id="available-list"></div>
+    </div>
+
+    <!-- Add simulator popover (slides over sidebar content) -->
+    <div id="add-popover" class="add-popover hidden" aria-hidden="true">
+      <div class="add-popover-header">
+        <input id="add-search" class="add-search" placeholder="Search…"
+               autocomplete="off" autocorrect="off" spellcheck="false">
+        <button id="add-close-btn" class="add-close-btn" title="Close">✕</button>
       </div>
+      <div id="add-list" class="add-list"></div>
     </div>
 
     <div class="sidebar-footer">

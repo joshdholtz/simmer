@@ -1,12 +1,15 @@
-import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim, requestPermission } from './api.js';
+import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim, bootAvd, requestPermission } from './api.js';
 import { SimStream } from './stream.js';
 import { SimTerminal } from './terminal.js';
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const deviceList        = $('device-list');
-const availableSection  = $('available-section');
-const availableList     = $('available-list');
+const deviceList     = $('device-list');
+const addSimBtn      = $('add-sim-btn');
+const addPopover     = $('add-popover');
+const addSearch      = $('add-search');
+const addList        = $('add-list');
+const addCloseBtn    = $('add-close-btn');
 const modeBadge      = $('mode-badge');
 const emptyState     = $('empty-state');
 const simPanelsEl    = $('sim-panels');
@@ -30,6 +33,7 @@ const permsList      = $('perms-list');
 
 // ── State ────────────────────────────────────────────────────────────────────
 let allSims = [];
+let hasAdb = false;
 
 // udid → { stream, panelEl, frameEl, canvasEl, overlayEl, pillEl, dotEl, ro, appearMode }
 const simPanels = new Map();
@@ -131,9 +135,9 @@ function renderPermsWidget(info) {
 async function loadSims() {
   deviceList.innerHTML = '<div class="device-list-empty">Scanning…</div>';
   try {
-    const [sims, info, available] = await Promise.all([fetchSims(), fetchInfo(), fetchAvailableDevices()]);
+    const [sims, info] = await Promise.all([fetchSims(), fetchInfo()]);
     allSims = sims;
-
+    hasAdb = info.has_adb !== false;
     updateModeBadge(info);
     renderPermsWidget(info);
 
@@ -146,92 +150,130 @@ async function loadSims() {
     }
 
     renderDeviceList();
-    renderAvailableList(available);
   } catch {
     deviceList.innerHTML = '<div class="device-list-empty">Could not reach server</div>';
   }
 }
 
-// ── Available (bootable) devices ─────────────────────────────────────────────
-let bootingUdids = new Set();
+// ── Add-simulator popover ─────────────────────────────────────────────────────
+let _addDevices = [];
+let _bootingIds = new Set();
 
-function renderAvailableList(devices) {
-  // Filter out devices already booted
-  const bootedIds = new Set(allSims.map(s => s.id));
-  const available = devices.filter(d => !bootedIds.has(d.id));
+function openAddPopover() {
+  addPopover.classList.remove('hidden');
+  addPopover.setAttribute('aria-hidden', 'false');
+  addSearch.value = '';
+  addList.innerHTML = '<div class="add-list-empty">Loading…</div>';
+  addSearch.focus();
 
-  if (!available.length) {
-    availableSection.classList.remove('visible');
+  fetchAvailableDevices().then(devices => {
+    const bootedIds = new Set(allSims.map(s => s.id));
+    _addDevices = devices.filter(d => !bootedIds.has(d.id));
+    renderAddList('');
+  }).catch(() => {
+    addList.innerHTML = '<div class="add-list-empty">Could not load devices</div>';
+  });
+}
+
+function closeAddPopover() {
+  addPopover.classList.add('hidden');
+  addPopover.setAttribute('aria-hidden', 'true');
+}
+
+function renderAddList(query) {
+  const q = query.toLowerCase().trim();
+  const filtered = q ? _addDevices.filter(d => d.name.toLowerCase().includes(q)) : _addDevices;
+
+  if (!filtered.length) {
+    addList.innerHTML = `<div class="add-list-empty">${q ? 'No matches' : 'No simulators available'}</div>`;
     return;
   }
-  availableSection.classList.add('visible');
 
-  availableList.innerHTML = available.map(d => `
-    <div class="device-item-available">
-      <span class="device-icon">${simIcon(d.name)}</span>
-      <span class="device-info">
-        <span class="device-name">${esc(d.name)}</span>
-        <span class="device-dims">${d.runtime}</span>
-      </span>
-      <button class="boot-btn${bootingUdids.has(d.id) ? ' booting' : ''}"
-              data-udid="${esc(d.id)}" data-name="${esc(d.name)}"
-              data-w="${d.width}" data-h="${d.height}"
-              title="Boot simulator">
-        ${bootingUdids.has(d.id) ? '…' : '▶'}
-      </button>
+  const groups = {};
+  for (const d of filtered) {
+    const g = d.platform === 'android' ? 'Android' : 'iOS';
+    (groups[g] = groups[g] || []).push(d);
+  }
+
+  addList.innerHTML = Object.entries(groups).map(([label, devs]) => `
+    <div class="add-group">
+      <div class="add-group-label">${label}</div>
+      ${devs.map(d => {
+        const booting = _bootingIds.has(d.id);
+        return `<div class="add-device-item" data-id="${esc(d.id)}" data-name="${esc(d.name)}"
+                     data-platform="${esc(d.platform)}"
+                     data-w="${d.width || 0}" data-h="${d.height || 0}">
+          <span class="add-device-icon">${simIcon(d.name)}</span>
+          <span class="add-device-info">
+            <span class="add-device-name">${esc(d.name)}</span>
+            ${d.runtime ? `<span class="add-device-sub">${esc(d.runtime)}</span>` : ''}
+          </span>
+          <button class="add-boot-btn${booting ? ' booting' : ''}" title="${booting ? 'Booting…' : 'Boot'}">
+            ${booting ? '<span class="add-spinner"></span>' : '▶'}
+          </button>
+        </div>`;
+      }).join('')}
     </div>`).join('');
 
-  availableList.querySelectorAll('.boot-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleBoot(
-      btn.dataset.udid, btn.dataset.name,
-      parseInt(btn.dataset.w), parseInt(btn.dataset.h)
+  addList.querySelectorAll('.add-boot-btn:not(.booting)').forEach(btn => {
+    const item = btn.closest('.add-device-item');
+    btn.addEventListener('click', () => handleAddBoot(
+      item.dataset.id, item.dataset.name, item.dataset.platform,
+      parseInt(item.dataset.w), parseInt(item.dataset.h)
     ));
   });
 }
 
-async function handleBoot(udid, name, w, h) {
-  if (bootingUdids.has(udid)) return;
-  bootingUdids.add(udid);
+async function handleAddBoot(id, name, platform, w, h) {
+  if (_bootingIds.has(id)) return;
+  _bootingIds.add(id);
+  renderAddList(addSearch.value);
 
-  // Update button immediately
-  const btn = availableList.querySelector(`[data-udid="${CSS.escape(udid)}"]`);
-  if (btn) { btn.textContent = '…'; btn.classList.add('booting'); }
+  const prevAndroidIds = new Set(allSims.filter(s => s.id.startsWith('emulator-')).map(s => s.id));
 
   try {
-    await bootSim(udid);
-  } catch { /* server will handle errors */ }
+    if (platform === 'android') await bootAvd(id);
+    else await bootSim(id);
+  } catch { /* poll handles it */ }
 
-  // Poll until the sim appears as booted
+  closeAddPopover();
+
   const poll = setInterval(async () => {
-    const sims = await fetchSims().catch(() => []);
-    const booted = sims.find(s => s.id === udid);
+    const sims = await fetchSims().catch(() => null);
+    if (!sims) return;
+    let booted = null;
+    if (platform === 'android') {
+      booted = sims.find(s => s.id.startsWith('emulator-') && !prevAndroidIds.has(s.id));
+    } else {
+      booted = sims.find(s => s.id === id);
+    }
     if (booted) {
       clearInterval(poll);
-      bootingUdids.delete(udid);
+      _bootingIds.delete(id);
       allSims = sims;
       renderDeviceList();
-      // Auto-open the newly booted sim
-      addSimPanel(udid, name, w, h);
-      // Refresh available list
-      const avail = await fetchAvailableDevices().catch(() => []);
-      renderAvailableList(avail);
+      addSimPanel(booted.id, booted.name, booted.width, booted.height);
     }
   }, 2000);
 
-  // Safety timeout — stop polling after 90s
-  setTimeout(() => {
-    clearInterval(poll);
-    bootingUdids.delete(udid);
-  }, 90_000);
+  setTimeout(() => { clearInterval(poll); _bootingIds.delete(id); }, 90_000);
 }
+
+addSimBtn.addEventListener('click', openAddPopover);
+addCloseBtn.addEventListener('click', closeAddPopover);
+addSearch.addEventListener('input', () => renderAddList(addSearch.value));
+addPopover.addEventListener('keydown', e => { if (e.key === 'Escape') closeAddPopover(); });
 
 function renderDeviceList() {
   const filterOn = projFilter.checked;
   const sims = filterOn ? allSims.filter(s => s.project_app) : allSims;
+  const adbHint = !hasAdb
+    ? '<div class="device-list-hint">🤖 <span>No <code>adb</code> — install <code>android-platform-tools</code> for Android</span></div>'
+    : '';
   if (!sims.length) {
     deviceList.innerHTML = `<div class="device-list-empty">${
       filterOn ? 'No project simulators' : 'No simulators running'
-    }</div>`;
+    }</div>${adbHint}`;
     return;
   }
   deviceList.innerHTML = sims.map(s => `
@@ -241,10 +283,10 @@ function renderDeviceList() {
       <span class="device-icon">${simIcon(s.name)}</span>
       <span class="device-info">
         <span class="device-name">${esc(s.name)}</span>
-        <span class="device-dims">${s.width} × ${s.height}</span>
+        <span class="device-dims">${s.width && s.height ? `${s.width} × ${s.height}` : 'Android'}</span>
       </span>
       ${s.project_app ? '<span class="device-badge">★</span>' : ''}
-    </div>`).join('');
+    </div>`).join('') + adbHint;
 
   deviceList.querySelectorAll('.device-item').forEach(el => {
     el.addEventListener('click', () =>

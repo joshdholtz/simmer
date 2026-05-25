@@ -137,7 +137,7 @@ def rotate(udid: str) -> None:
     import AppKit
     import Quartz
 
-    open(_ROTATE_LOG, "w").close()  # clear on each attempt
+    Path(_ROTATE_LOG).write_text("")  # clear on each attempt
     _rlog(f"backend=simctl udid={udid[:8]}")
 
     result = subprocess.run(

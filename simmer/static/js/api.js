@@ -27,6 +27,14 @@ export async function bootSim(udid) {
   return _fetch(`/api/boot/${udid}`, { method: 'POST' });
 }
 
+export async function bootAvd(avd) {
+  return _fetch('/api/boot-avd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avd }),
+  });
+}
+
 export async function requestPermission(permission) {
   return _fetch('/api/request-permissions', {
     method: 'POST',

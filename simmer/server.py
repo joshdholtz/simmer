@@ -172,6 +172,7 @@ def make_app(
     app.router.add_get("/api/sims", _sims)
     app.router.add_get("/api/devices", _devices)
     app.router.add_post("/api/boot/{udid}", _boot)
+    app.router.add_post("/api/boot-avd", _boot_avd)
     app.router.add_get("/ws/pty", _ws_pty)   # must be before /ws/{udid}
     app.router.add_get("/ws/{udid}", _ws)
     app.router.add_static("/css", STATIC_DIR / "css")
@@ -184,7 +185,7 @@ async def _index(request: web.Request) -> web.FileResponse:
 
 
 async def _info(request: web.Request) -> web.Response:
-    from .backend_base import has_screen_recording, has_accessibility, has_idb
+    from .backend_base import has_screen_recording, has_accessibility, has_idb, has_adb
     info: dict = {"mode": request.app["backend"].name}
     if request.app.get("bundle_id"):
         info["bundle_id"] = request.app["bundle_id"]
@@ -193,12 +194,16 @@ async def _info(request: web.Request) -> web.Response:
         "accessibility": has_accessibility(),
         "idb": has_idb(),
     }
+    info["has_adb"] = has_adb()
     info["binary_path"] = _binary_path()
     return web.json_response(info)
 
 
 async def _request_permissions(request: web.Request) -> web.Response:
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        raise web.HTTPBadRequest()
     perm = body.get("permission")
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _do_request_permissions, perm)
@@ -266,13 +271,34 @@ async def _capture(backend: Any, udid: str, quality: int) -> Optional[bytes]:
 
 
 async def _devices(request: web.Request) -> web.Response:
-    devices = await _run(list_available_devices)
-    return web.json_response(devices)
+    from .backend_base import has_adb
+    ios = await _run(list_available_devices)
+    result = [{"platform": "ios", **d} for d in ios]
+    if has_adb():
+        try:
+            from . import backend_adb
+            avds = await _run(backend_adb.list_available_avds)
+            result += [{"platform": "android", "id": a["avd"], "name": a["name"]} for a in avds]
+        except Exception:
+            pass
+    return web.json_response(result)
 
 
 async def _boot(request: web.Request) -> web.Response:
     udid = request.match_info["udid"]
     await _run(boot_sim, udid)
+    return web.json_response({"ok": True})
+
+
+async def _boot_avd(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        raise web.HTTPBadRequest()
+    avd = body.get("avd", "")
+    if avd:
+        from . import backend_adb
+        await _run(backend_adb.boot_avd, avd)
     return web.json_response({"ok": True})
 
 
@@ -325,7 +351,8 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
         await ws.send_str(json.dumps({"type": "rotated"}))
 
     # simctl returns portrait-sized JPEGs regardless of device orientation; rotate server-side.
-    _needs_rotation = "simctl" in backend.name and "android" not in backend.name
+    _udid_backend = backend._backend_for(udid) if hasattr(backend, "_backend_for") else backend
+    _needs_rotation = "simctl" in getattr(_udid_backend, "name", "")
 
     async def frame_loop() -> None:
         send_failures = 0
@@ -357,7 +384,11 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
     try:
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
-                await _handle_input(json.loads(msg.data), udid, state, backend, ws)
+                try:
+                    data = json.loads(msg.data)
+                except Exception:
+                    continue
+                await _handle_input(data, udid, state, backend, ws)
             elif msg.type in (aiohttp.WSMsgType.ERROR, aiohttp.WSMsgType.CLOSE):
                 break
     finally:
@@ -374,8 +405,6 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
 
 async def _handle_input(data: dict, udid: str, state: dict, backend: Any, ws: Optional[web.WebSocketResponse] = None) -> None:
     t = data.get("type")
-    if t not in ("tap", "drag"):
-        print(f"[input] {t}", flush=True)
 
     if t == "settings":
         if "fps" in data:
@@ -390,28 +419,25 @@ async def _handle_input(data: dict, udid: str, state: dict, backend: Any, ws: Op
             state["dev_h"] = int(data["dev_h"])
         return
 
-    if t == "tap":
-        await _run(backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"])
-    elif t == "drag":
-        await _run(backend.drag, udid, data["x1"], data["y1"], data["x2"], data["y2"], state["dev_w"], state["dev_h"])
-    elif t == "key":
-        await _run(backend.key, udid, data.get("key", ""))
-    elif t == "text":
-        await _run(backend.text, udid, data.get("text", ""))
-    elif t == "home":
-        await _run(backend.home, udid)
-    elif t == "rotate":
-        print(f"[server] rotate received udid={udid[:8]}", flush=True)
-        try:
+    try:
+        if t == "tap":
+            await _run(backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"])
+        elif t == "drag":
+            await _run(backend.drag, udid, data["x1"], data["y1"], data["x2"], data["y2"], state["dev_w"], state["dev_h"])
+        elif t == "key":
+            await _run(backend.key, udid, data.get("key", ""))
+        elif t == "text":
+            await _run(backend.text, udid, data.get("text", ""))
+        elif t == "home":
+            await _run(backend.home, udid)
+        elif t == "rotate":
             await _run(backend.rotate, udid)
             if ws and not ws.closed:
                 await ws.send_str(json.dumps({"type": "rotated"}))
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print(f"[server] rotate error: {e}", flush=True)
-    elif t == "appearance":
-        await _run(backend.appearance, udid, data.get("mode", "dark"))
+        elif t == "appearance":
+            await _run(backend.appearance, udid, data.get("mode", "dark"))
+    except Exception:
+        pass
 
 
 async def _pty_reader_loop(session_id: str) -> None:
@@ -582,7 +608,6 @@ def _local_ip() -> str:
 
 
 def _tailscale_info() -> dict:
-    import json as _json
     info: dict = {}
 
     ts_candidates = [
@@ -603,7 +628,7 @@ def _tailscale_info() -> dict:
         try:
             r = subprocess.run([ts_bin, "status", "--json"], capture_output=True, text=True, timeout=3)
             if r.returncode == 0:
-                dns = _json.loads(r.stdout).get("Self", {}).get("DNSName", "").rstrip(".")
+                dns = json.loads(r.stdout).get("Self", {}).get("DNSName", "").rstrip(".")
                 if dns:
                     info["hostname"] = dns
         except Exception:

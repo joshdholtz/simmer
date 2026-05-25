@@ -7,32 +7,40 @@ from .server import run
 
 
 def _select_backend(mode: str):
-    if mode == "android":
-        from . import backend_adb
-        return backend_adb.AdbBackend()
     if mode == "fast":
         from . import backend_quartz
-        return backend_quartz
-    if mode == "compat":
+        ios = backend_quartz
+    elif mode == "compat":
         from . import backend_simctl
-        return backend_simctl
-
-    if has_screen_recording() and has_accessibility():
+        ios = backend_simctl
+    elif has_screen_recording() and has_accessibility():
         print("Permissions detected — using fast mode (Quartz)")
         from . import backend_quartz
-        return backend_quartz
-
-    if has_idb():
+        ios = backend_quartz
+    elif has_idb():
         print("Using compat mode (simctl + idb)")
         from . import backend_simctl
-        return backend_simctl
+        ios = backend_simctl
+    else:
+        print("Warning: Screen Recording/Accessibility not granted and idb not found.")
+        print("  Fast mode:   grant permissions in System Settings → Privacy & Security")
+        print("  Compat mode: brew tap facebook/fb && brew install idb-companion")
+        print("Attempting compat mode anyway (capture may fail)...")
+        from . import backend_simctl
+        ios = backend_simctl
 
-    print("Warning: Screen Recording/Accessibility not granted and idb not found.")
-    print("  Fast mode:   grant permissions in System Settings → Privacy & Security")
-    print("  Compat mode: brew tap facebook/fb && brew install idb-companion")
-    print("Attempting compat mode anyway (capture may fail)...")
-    from . import backend_simctl
-    return backend_simctl
+    backends = [ios]
+    if has_adb():
+        from . import backend_adb
+        backends.append(backend_adb.AdbBackend())
+    else:
+        print("Android emulators: install android-platform-tools for adb support")
+
+    if len(backends) == 1:
+        return ios
+
+    from .backend_multi import MultiBackend
+    return MultiBackend(backends)
 
 
 def main() -> None:
@@ -42,9 +50,9 @@ def main() -> None:
     parser.add_argument("--quality", type=int, default=70)
     parser.add_argument(
         "--mode",
-        choices=["auto", "fast", "compat", "android"],
+        choices=["auto", "fast", "compat"],
         default="auto",
-        help="auto | fast: Quartz | compat: simctl+idb | android: adb emulators",
+        help="auto | fast: Quartz | compat: simctl+idb",
     )
     parser.add_argument(
         "--project-dir",
