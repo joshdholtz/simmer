@@ -24,6 +24,9 @@ dependencies = [
     "pyobjc-framework-Quartz",
 ]
 
+[project.optional-dependencies]
+dev = ["pyinstaller"]
+
 [project.urls]
 Homepage = "https://github.com/joshdholtz/simmer"
 Repository = "https://github.com/joshdholtz/simmer"

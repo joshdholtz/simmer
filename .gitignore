@@ -3,6 +3,9 @@ __pycache__/
 *.pyo
 .DS_Store
 rotate_sim
+rotate_sim_bin
 dist/
+build/
 *.egg-info/
 .venv/
+*.spec.bak

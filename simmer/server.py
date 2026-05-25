@@ -22,7 +22,11 @@ from aiohttp import web
 
 from .backend_base import sim_has_app, list_available_devices, boot_sim
 
-STATIC_DIR = Path(str(files(__package__).joinpath("static")))
+import sys as _sys
+if getattr(_sys, 'frozen', False):
+    STATIC_DIR = Path(_sys._MEIPASS) / "simmer" / "static"
+else:
+    STATIC_DIR = Path(str(files(__package__).joinpath("static")))
 
 # One single-thread executor per UDID for captures.
 # max_workers=1 means at most one hung Quartz thread per simulator, ever.

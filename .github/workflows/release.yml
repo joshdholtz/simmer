@@ -9,56 +9,99 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Release
+  build:
+    name: Build binary
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create GitHub Release
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller pyobjc-framework-Quartz aiohttp
+          pip install -e .
+
+      - name: Build rotate_sim
+        run: swiftc -O rotate_sim.swift -o rotate_sim_bin
+
+      - name: Build binary with PyInstaller
+        run: pyinstaller simmer.spec
+
+      - name: Package release
+        run: |
+          VERSION="${{ github.ref_name }}"
+          ARCH=$(uname -m)
+          BUNDLE="simmer-${VERSION}-${ARCH}"
+          mkdir -p "dist/${BUNDLE}"
+          cp dist/simmer "dist/${BUNDLE}/simmer"
+          cp rotate_sim_bin "dist/${BUNDLE}/rotate_sim"
+          cd dist
+          tar -czf "${BUNDLE}.tar.gz" "${BUNDLE}/"
+          shasum -a 256 "${BUNDLE}.tar.gz" > "${BUNDLE}.tar.gz.sha256"
+          echo "BUNDLE=${BUNDLE}" >> $GITHUB_ENV
+          echo "ARCH=${ARCH}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release and upload
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
-            --generate-notes
-
-      - name: Get tarball sha256
-        id: sha
-        run: |
-          VERSION="${{ github.ref_name }}"
-          URL="https://github.com/joshdholtz/simmer/archive/refs/tags/${VERSION}.tar.gz"
-          SHA=$(curl -sL "$URL" | shasum -a 256 | awk '{print $1}')
-          echo "sha256=$SHA" >> $GITHUB_OUTPUT
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+            --generate-notes \
+            || gh release edit "${{ github.ref_name }}" --draft=false
+          gh release upload "${{ github.ref_name }}" \
+            "dist/${BUNDLE}.tar.gz" \
+            "dist/${BUNDLE}.tar.gz.sha256" \
+            --clobber
 
       - name: Update Homebrew formula in tap
         env:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         run: |
-          VERSION="${{ steps.sha.outputs.version }}"
-          SHA="${{ steps.sha.outputs.sha256 }}"
-          URL="${{ steps.sha.outputs.url }}"
+          VERSION="${{ github.ref_name }}"
+          SHA=$(cat "dist/${BUNDLE}.tar.gz.sha256" | awk '{print $1}')
+          URL="https://github.com/joshdholtz/simmer/releases/download/${VERSION}/${BUNDLE}.tar.gz"
 
-          # Clone the tap
           git clone https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/joshdholtz/homebrew-tap.git /tmp/homebrew-tap
 
-          # Copy formula and update url + sha256
-          cp Formula/simmer.rb /tmp/homebrew-tap/simmer.rb
-          sed -i '' \
-            -e "s|url \"https://github.com/joshdholtz/simmer/archive/refs/tags/.*\"|url \"${URL}\"|" \
-            -e "s|sha256 \".*\" # fill in.*|sha256 \"${SHA}\"|" \
-            -e "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${SHA}\"|" \
-            /tmp/homebrew-tap/simmer.rb || \
-          sed -i \
-            -e "s|url \"https://github.com/joshdholtz/simmer/archive/refs/tags/.*\"|url \"${URL}\"|" \
-            -e "s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${SHA}\"|" \
-            /tmp/homebrew-tap/simmer.rb
+          cat > /tmp/homebrew-tap/simmer.rb << FORMULA
+          class Simmer < Formula
+            desc "Stream iOS Simulator to your browser with touch, keyboard, and terminal"
+            homepage "https://github.com/joshdholtz/simmer"
+            url "${URL}"
+            sha256 "${SHA}"
+            license "MIT"
+            version "${VERSION#v}"
+
+            def install
+              bin.install "simmer"
+              bin.install "rotate_sim"
+            end
+
+            def caveats
+              <<~EOS
+                Fast mode (Quartz capture) requires macOS permissions:
+                  System Settings → Privacy & Security → Screen Recording → simmer
+                  System Settings → Privacy & Security → Accessibility → rotate_sim
+
+                Compat mode works without permissions but needs idb:
+                  brew tap facebook/fb && brew install idb-companion
+              EOS
+            end
+
+            test do
+              system "#{bin}/simmer", "--help"
+            end
+          end
+          FORMULA
 
           cd /tmp/homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add simmer.rb
-          git commit -m "simmer ${{ github.ref_name }}"
+          git commit -m "simmer ${VERSION}"
           git push
