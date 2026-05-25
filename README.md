@@ -44,7 +44,7 @@ I do most of my dev work SSHed into a Mac mini and I wanted a simple local way t
 Optional, for the **fast** backend (recommended):
 
 - Screen Recording permission granted to Terminal / your shell
-- Accessibility permission granted to `rotate_sim`
+- Accessibility permission only if you want fast-mode tap/drag, keyboard shortcuts, text paste, or iOS rotate
 
 Optional, for the **compat** backend:
 
@@ -99,18 +99,32 @@ simmer picks the best backend automatically and combines them — iOS and Androi
 
 | Mode | Capture | Input | Requires |
 |------|---------|-------|----------|
-| **fast** | Quartz (native) | CGEvent | Screen Recording + Accessibility |
-| **compat** | `simctl screenshot` | `idb` | `idb-companion` |
+| **fast** | Quartz (native) | CGEvent + simulator helpers | Screen Recording; Accessibility for host mouse/key fallbacks |
+| **compat** | `simctl screenshot` | `idb` + `simctl` | `idb-companion`; no macOS privacy permissions |
 | **Android** | `adb screencap` | `adb input` | Android Studio |
 
 The startup log tells you which mode is active and what's needed to upgrade.
+
+### Permission matrix
+
+| Feature | fast mode | compat mode | Notes |
+|---------|-----------|-------------|-------|
+| Stream iOS screen | **Screen Recording** | No macOS permission | Fast mode captures the Simulator window with Quartz. |
+| Tap / drag iOS | **Accessibility** | No macOS permission | Compat mode uses `idb ui tap/swipe`; fast mode uses CGEvent mouse injection. |
+| Keyboard buttons | **Accessibility** | No macOS permission | Compat mode uses `idb ui key`; fast mode uses CGEvent keyboard events. |
+| Send text | **Accessibility** | No macOS permission | Fast mode pastes via host keyboard shortcut; compat mode uses `idb ui text`. |
+| Home button | Usually no Accessibility | No macOS permission | Uses `idb ui button HOME`, then `simctl launch ... com.apple.springboard`; fast mode only falls back to Cmd+Shift+H if those fail. |
+| iOS rotate | **Accessibility** | **Accessibility** | Apple `simctl` and `idb` do not expose a public rotate command, so simmer falls back to Simulator keyboard/menu automation. |
+| Appearance switch | No macOS permission | No macOS permission | Uses `xcrun simctl ui appearance`. |
+| Android controls | No macOS permission | No macOS permission | Android uses `adb` and is independent of iOS backend mode. |
 
 ### Fast mode — grant permissions
 
 In **System Settings → Privacy & Security**:
 
 - **Screen Recording** → add Terminal (or your Python binary)
-- **Accessibility** → add `rotate_sim` (prompted automatically on first rotate)
+- **Accessibility** → add Terminal / your shell for fast-mode taps, drags, keyboard, and text paste
+- **Accessibility** → add `rotate_sim` for iOS rotate (prompted automatically on first rotate)
 
 ### Compat mode — install idb
 
