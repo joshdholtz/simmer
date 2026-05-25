@@ -9,22 +9,32 @@ from .backend_base import SimDevice
 
 name = "android (adb)"
 
-_ADB = shutil.which("adb") or "adb"
+_SDK_ROOTS = [
+    os.environ.get("ANDROID_HOME", ""),
+    os.environ.get("ANDROID_SDK_ROOT", ""),
+    os.path.expanduser("~/Library/Android/sdk"),
+]
+
+
+def _find_adb() -> str:
+    # Prefer SDK-bundled adb — it shares a daemon with the running emulator.
+    # Homebrew's standalone adb starts a separate daemon and won't see emulators.
+    for root in _SDK_ROOTS:
+        candidate = os.path.join(root, "platform-tools", "adb")
+        if os.path.isfile(candidate):
+            return candidate
+    return shutil.which("adb") or "adb"
 
 
 def _find_emulator() -> str:
-    if e := shutil.which("emulator"):
-        return e
-    for root in [
-        os.environ.get("ANDROID_HOME", ""),
-        os.environ.get("ANDROID_SDK_ROOT", ""),
-        os.path.expanduser("~/Library/Android/sdk"),
-    ]:
+    for root in _SDK_ROOTS:
         candidate = os.path.join(root, "emulator", "emulator")
         if os.path.isfile(candidate):
             return candidate
-    return "emulator"
+    return shutil.which("emulator") or "emulator"
 
+
+_ADB = _find_adb()
 _EMULATOR = _find_emulator()
 
 

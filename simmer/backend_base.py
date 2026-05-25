@@ -1,6 +1,7 @@
 from __future__ import annotations
 import dataclasses
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -51,6 +52,14 @@ def has_idb() -> bool:
     return shutil.which("idb") is not None
 
 def has_adb() -> bool:
+    sdk_roots = [
+        os.environ.get("ANDROID_HOME", ""),
+        os.environ.get("ANDROID_SDK_ROOT", ""),
+        os.path.expanduser("~/Library/Android/sdk"),
+    ]
+    for root in sdk_roots:
+        if os.path.isfile(os.path.join(root, "platform-tools", "adb")):
+            return True
     return shutil.which("adb") is not None
 
 

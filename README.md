@@ -115,13 +115,13 @@ brew install idb-companion
 
 No permissions required; works immediately, lower frame rate.
 
-### Android mode — install adb
+### Android emulators
 
-```bash
-brew install android-platform-tools
-```
+If you have **Android Studio**, no extra install is needed — simmer uses the `adb` bundled in `~/Library/Android/sdk/platform-tools/` automatically.
 
-Then start an Android emulator from Android Studio and run `simmer --mode android`. No permissions needed — everything goes through adb.
+Just start an emulator from Android Studio and it will appear in simmer's sidebar alongside your iOS simulators.
+
+> **Don't use `brew install android-platform-tools`** — Homebrew's standalone adb starts a separate daemon and won't see emulators launched by Android Studio.
 
 ## Tips
 
