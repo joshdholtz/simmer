@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-24
+
+### Added
+- Android emulator support via `adb screencap` + `adb input`; iOS and Android appear side-by-side automatically
+- Add-device popover — searchable `+` picker to boot shut-down iOS simulators or Android AVDs without leaving the browser
+- Session restore — reopens last layout (open devices, terminal position/size, fps/quality) on restart via localStorage
+- MultiBackend — parallel backend polling at startup so iOS + Android detection doesn't slow each other down
+- Prefers SDK-bundled adb over Homebrew's standalone adb (different daemon; Homebrew's won't see Android Studio emulators)
+- Booting Android emulators are detached from simmer's process group so Ctrl+C won't kill them
+
 ## [0.1.0] - 2026-05-24
 
 ### Added
@@ -24,9 +34,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Pinnable terminal panel (side or bottom drawer)
 - Tailscale-friendly — binds to `0.0.0.0`, works over LAN and VPN
 - Homebrew formula via `joshdholtz/tap`
-- **Android emulator support** via `adb screencap` + `adb input`; iOS and Android appear side-by-side automatically
-- **Add-device popover** — searchable `+` picker to boot shut-down iOS simulators or Android AVDs without leaving the browser
-- **Session restore** — reopens last layout (open devices, terminal position/size, fps/quality) on restart via localStorage
-- **MultiBackend** — parallel backend polling at startup so iOS + Android detection doesn't slow each other down
-- Prefers SDK-bundled adb over Homebrew's standalone adb (different daemon; Homebrew's won't see Android Studio emulators)
-- Booting Android emulators are now detached from simmer's process group so Ctrl+C won't kill them
