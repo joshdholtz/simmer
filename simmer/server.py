@@ -48,6 +48,13 @@ _PTY_BUF_MAX = 64 * 1024  # 64 KB replay buffer sent on reattach
 _PTY_SESSION_TTL = 30 * 60  # 30 min before idle session is reaped
 
 
+async def _close_ws_quietly(ws: web.WebSocketResponse) -> None:
+    try:
+        await ws.close()
+    except Exception:
+        pass
+
+
 def _is_landscape(udid: str) -> bool:
     """Detect orientation from live Simulator window bounds.
     Uses only Quartz (thread-safe) — no AppKit main-thread requirement.
@@ -340,7 +347,9 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
 
     # Upgrade the WebSocket immediately so the client isn't stuck in CONNECTING
     # while we run the simctl subprocess.
-    ws = web.WebSocketResponse(heartbeat=15)
+    # Frames are already JPEG/PNG. Disabling permessage-deflate avoids aiohttp
+    # background compression tasks that can outlive a closing browser socket.
+    ws = web.WebSocketResponse(heartbeat=15, compress=False)
     try:
         await ws.prepare(request)
     except (AssertionError, ConnectionResetError):
@@ -358,14 +367,17 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
     # Evict any zombie handler for this UDID immediately
     old = _active_sim_ws.pop(udid, None)
     if old is not None and not old.closed:
-        asyncio.ensure_future(old.close())
+        asyncio.create_task(_close_ws_quietly(old))
     _active_sim_ws[udid] = ws
 
     last_hash: list[Optional[str]] = [None]
 
     # Tell newly connected client the current orientation so page refreshes work
     if await _run(_is_landscape, udid):
-        await ws.send_str(json.dumps({"type": "rotated"}))
+        try:
+            await ws.send_str(json.dumps({"type": "rotated"}))
+        except Exception:
+            return ws
 
     # simctl returns portrait-sized JPEGs regardless of device orientation; rotate server-side.
     _udid_backend = backend._backend_for(udid) if hasattr(backend, "_backend_for") else backend
@@ -393,7 +405,7 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
                     send_failures += 1
                     # After 3 consecutive send failures the client is gone — close cleanly
                     if send_failures >= 3:
-                        await ws.close()
+                        await _close_ws_quietly(ws)
                         break
             await asyncio.sleep(1.0 / state["fps"])
 
@@ -553,7 +565,7 @@ async def _pty_cleanup(session_id: str) -> None:
 
 
 async def _ws_pty(request: web.Request) -> web.WebSocketResponse:
-    ws = web.WebSocketResponse(heartbeat=20)
+    ws = web.WebSocketResponse(heartbeat=20, compress=False)
     await ws.prepare(request)
     session_id = request.rel_url.query.get("session", "")
     session = _pty_sessions.get(session_id)
