@@ -2,11 +2,33 @@
 name = "simmer"
 version = "0.1.0"
 description = "Stream iOS Simulator to your browser with touch, keyboard, and terminal"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Josh Holtz", email = "me@joshholtz.com" }]
 requires-python = ">=3.11"
+keywords = ["ios", "simulator", "xcode", "streaming", "remote", "browser"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Utilities",
+]
 dependencies = [
     "aiohttp>=3.9",
     "pyobjc-framework-Quartz",
 ]
+
+[project.urls]
+Homepage = "https://github.com/joshdholtz/simmer"
+Repository = "https://github.com/joshdholtz/simmer"
+Issues = "https://github.com/joshdholtz/simmer/issues"
+Changelog = "https://github.com/joshdholtz/simmer/blob/main/CHANGELOG.md"
 
 [project.scripts]
 simmer = "simmer.__main__:main"
