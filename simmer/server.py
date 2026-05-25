@@ -41,6 +41,10 @@ _capture_in_flight: dict[str, bool] = {}
 # One live sim WS per UDID — evicts zombie handlers on reconnect.
 _active_sim_ws: dict[str, web.WebSocketResponse] = {}
 
+# Orientation forced through XCTest does not always resize Simulator.app's host
+# window. Track it per UDID and rotate frames/input in simmer.
+_forced_landscape: dict[str, bool] = {}
+
 # Persistent PTY sessions — survive WS disconnects so iPad can reattach.
 # Each entry: {master_fd, proc, buf (bytearray), ws (current client or None), cleanup_task}
 _pty_sessions: dict[str, dict] = {}
@@ -151,6 +155,11 @@ def _rotate_jpeg_ccw90(jpeg_bytes: bytes, quality: int) -> Optional[bytes]:
     except Exception as e:
         print(f"[rotate_jpeg] {e}", flush=True)
         return None
+
+
+def _map_for_forced_landscape(nx: float, ny: float) -> tuple[float, float]:
+    """Map displayed landscape coordinates back into the portrait simulator space."""
+    return 1.0 - ny, nx
 
 
 @web.middleware
@@ -362,6 +371,7 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
         "data_saver": q.get("data_saver", "0") == "1",
         "dev_w": int(q.get("w", 390)),
         "dev_h": int(q.get("h", 844)),
+        "forced_landscape": _forced_landscape.get(udid, False),
     }
 
     # Evict any zombie handler for this UDID immediately
@@ -373,7 +383,7 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
     last_hash: list[Optional[str]] = [None]
 
     # Tell newly connected client the current orientation so page refreshes work
-    if await _run(_is_landscape, udid):
+    if state["forced_landscape"] or await _run(_is_landscape, udid):
         try:
             await ws.send_str(json.dumps({"type": "rotated"}))
         except Exception:
@@ -388,7 +398,7 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
         while not ws.closed:
             frame = await _capture(backend, udid, state["quality"])
             if frame:
-                if _needs_rotation and await _run(_is_landscape, udid):
+                if state["forced_landscape"] or (_needs_rotation and await _run(_is_landscape, udid)):
                     rotated = await _run(_rotate_jpeg_ccw90, frame, state["quality"])
                     if rotated:
                         frame = rotated
@@ -456,17 +466,28 @@ async def _handle_input(
 
     try:
         if t == "tap":
-            await _run(backend.tap, udid, data["x"], data["y"], state["dev_w"], state["dev_h"])
+            x, y = data["x"], data["y"]
+            dev_w, dev_h = state["dev_w"], state["dev_h"]
+            if state.get("forced_landscape"):
+                x, y = _map_for_forced_landscape(x, y)
+                dev_w, dev_h = state["dev_h"], state["dev_w"]
+            await _run(backend.tap, udid, x, y, dev_w, dev_h)
         elif t == "drag":
+            x1, y1, x2, y2 = data["x1"], data["y1"], data["x2"], data["y2"]
+            dev_w, dev_h = state["dev_w"], state["dev_h"]
+            if state.get("forced_landscape"):
+                x1, y1 = _map_for_forced_landscape(x1, y1)
+                x2, y2 = _map_for_forced_landscape(x2, y2)
+                dev_w, dev_h = state["dev_h"], state["dev_w"]
             await _run(
                 backend.drag,
                 udid,
-                data["x1"],
-                data["y1"],
-                data["x2"],
-                data["y2"],
-                state["dev_w"],
-                state["dev_h"],
+                x1,
+                y1,
+                x2,
+                y2,
+                dev_w,
+                dev_h,
             )
         elif t == "key":
             await _run(backend.key, udid, data.get("key", ""))
@@ -475,9 +496,21 @@ async def _handle_input(
         elif t == "home":
             await _run(backend.home, udid)
         elif t == "rotate":
-            rotated = await _run(backend.rotate, udid)
+            target_landscape = not state.get("forced_landscape", False)
+            rotated = False
+            if not udid.startswith("emulator-"):
+                from .backend_ios import rotate_with_xctest
+
+                rotated = await _run(rotate_with_xctest, udid, target_landscape)
+                if rotated:
+                    state["forced_landscape"] = target_landscape
+                    _forced_landscape[udid] = target_landscape
+            if rotated is False:
+                rotated = await _run(backend.rotate, udid)
             if rotated is not False and ws and not ws.closed:
                 await ws.send_str(json.dumps({"type": "rotated"}))
+            elif ws and not ws.closed:
+                await ws.send_str(json.dumps({"type": "rotate_failed"}))
         elif t == "appearance":
             await _run(backend.appearance, udid, data.get("mode", "dark"))
     except Exception:

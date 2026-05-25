@@ -1,6 +1,6 @@
 [project]
 name = "simmer"
-version = "0.5.1"
+version = "0.5.2"
 description = "Stream iOS Simulator and Android Emulator to any browser with touch, keyboard, and terminal"
 readme = "README.md"
 license = { text = "MIT" }

@@ -22,7 +22,7 @@ class Simmer < Formula
     <<~EOS
       Fast mode (Quartz capture) requires macOS permissions:
         System Settings → Privacy & Security → Screen Recording → simmer
-        System Settings → Privacy & Security → Accessibility → rotate_sim
+        System Settings → Privacy & Security → Accessibility → rotate_sim (rotate fallback)
 
       Compat mode works without permissions but needs idb:
         brew tap facebook/fb && brew install idb-companion

@@ -17,6 +17,13 @@
 
 <div id="app">
 
+  <button id="mobile-menu-btn" class="mobile-menu-btn" title="Open simulator list" aria-label="Open simulator list" aria-expanded="false">
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <path d="M4 6h12M4 10h12M4 14h12"/>
+    </svg>
+  </button>
+  <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
   <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
   <aside id="sidebar">
     <div class="sidebar-logo">
@@ -87,7 +94,7 @@
       <div id="empty-state">
         <div class="empty-icon">📱</div>
         <div class="empty-title">No simulator selected</div>
-        <div class="empty-sub">Choose a device from the sidebar</div>
+        <div class="empty-sub">Choose a simulator device</div>
       </div>
       <div id="sim-panels"></div>
     </div>

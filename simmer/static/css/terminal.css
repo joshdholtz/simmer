@@ -154,3 +154,16 @@
 
 .term-pane .xterm        { flex: 1; min-height: 0; }
 .term-pane .xterm-viewport { background: transparent !important; }
+
+@media (max-width: 700px), (max-height: 480px) and (max-width: 900px) {
+  #content.pinned-right .term-resize-handle {
+    width: auto;
+    height: 5px;
+    align-self: auto;
+    cursor: row-resize;
+  }
+
+  #app.keyboard-open .term-pane {
+    padding-bottom: var(--sp-2);
+  }
+}

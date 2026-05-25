@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from conftest import make_completed_process
 
-from simmer.backend_ios import press_home
+from simmer.backend_ios import press_home, rotate_with_xctest
 
 
 class TestPressHome:
@@ -47,3 +47,44 @@ class TestPressHome:
         with patch("shutil.which", return_value=None):
             with patch("subprocess.run", return_value=make_completed_process(returncode=1)):
                 assert press_home("U1") is False
+
+
+class TestRotateWithXCTest:
+    HARNESS = "/tmp/OrientationHarness.xcodeproj"
+
+    def test_runs_xcodebuild_harness(self):
+        with patch("shutil.which", return_value="/usr/bin/xcodebuild"):
+            with patch("simmer.backend_ios._ensure_orientation_harness", return_value=self.HARNESS):
+                with patch("subprocess.run", return_value=make_completed_process(returncode=0)) as run:
+                    assert rotate_with_xctest("U1", True) is True
+
+        assert run.call_args.args[0][:6] == [
+            "xcodebuild",
+            "test",
+            "-project",
+            "/tmp/OrientationHarness.xcodeproj",
+            "-scheme",
+            "OrientationHarness",
+        ]
+        assert (
+            "-only-testing:OrientationHarnessUITests/OrientationHarnessUITests/testLandscapeLeft"
+            in run.call_args.args[0]
+        )
+
+    def test_runs_portrait_test(self):
+        with patch("shutil.which", return_value="/usr/bin/xcodebuild"):
+            with patch("simmer.backend_ios._ensure_orientation_harness", return_value=self.HARNESS):
+                with patch("subprocess.run", return_value=make_completed_process(returncode=0)) as run:
+                    assert rotate_with_xctest("U1", False) is True
+
+        assert "-only-testing:OrientationHarnessUITests/OrientationHarnessUITests/testPortrait" in run.call_args.args[0]
+
+    def test_returns_false_when_xcodebuild_missing(self):
+        with patch("shutil.which", return_value=None):
+            assert rotate_with_xctest("U1", True) is False
+
+    def test_returns_false_when_xcodebuild_fails(self):
+        with patch("shutil.which", return_value="/usr/bin/xcodebuild"):
+            with patch("simmer.backend_ios._ensure_orientation_harness", return_value=self.HARNESS):
+                with patch("subprocess.run", return_value=make_completed_process(returncode=65)):
+                    assert rotate_with_xctest("U1", True) is False

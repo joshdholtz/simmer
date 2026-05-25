@@ -602,3 +602,81 @@
   transition: opacity var(--dur-fast);
 }
 .kbd-send:active { opacity: 0.75; }
+
+@media (max-width: 700px), (max-height: 480px) and (max-width: 900px) {
+  .device-item {
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .device-icon {
+    width: 22px;
+    font-size: 18px;
+  }
+
+  .device-list-empty {
+    padding: var(--sp-3);
+  }
+
+  .device-list-hint {
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .sidebar-label-row {
+    padding-right: var(--sp-3);
+  }
+
+  #add-popover {
+    max-height: none;
+    border-bottom: none;
+  }
+
+  .add-device-item {
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .sidebar-btn {
+    min-height: 34px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .ctrl-label {
+    width: 44px;
+  }
+
+  .empty-icon {
+    font-size: 40px;
+  }
+
+  .empty-title {
+    font-size: 15px;
+  }
+
+  .empty-sub {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 480px), (max-height: 480px) and (max-width: 900px) {
+  .device-name {
+    font-size: 12px;
+  }
+
+  .device-dims {
+    font-size: 10px;
+  }
+
+  .sidebar-btn {
+    min-height: 32px;
+    font-size: 12px;
+  }
+
+  .ctrl-row {
+    gap: var(--sp-2);
+  }
+
+  .ctrl-label,
+  .ctrl-value {
+    font-size: 10px;
+  }
+}

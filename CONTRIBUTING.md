@@ -10,7 +10,7 @@ cd simmer
 pip install -e .
 ```
 
-Build the Swift rotation helper (needed for fast mode rotate):
+Build the Swift rotation helper:
 
 ```bash
 swiftc -O rotate_sim.swift -o rotate_sim

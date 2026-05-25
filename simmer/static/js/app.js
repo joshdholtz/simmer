@@ -4,7 +4,10 @@ import { SimTerminal } from './terminal.js';
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
+const app            = $('app');
 const deviceList     = $('device-list');
+const mobileMenuBtn  = $('mobile-menu-btn');
+const sidebarBackdrop = $('sidebar-backdrop');
 const addSimBtn      = $('add-sim-btn');
 const addPopover     = $('add-popover');
 const addSearch      = $('add-search');
@@ -45,6 +48,54 @@ let termTabs = [];
 let activeTermTabId = null;
 let termOpen = false;
 let termPinned = false;
+
+// ── Mobile viewport / software keyboard ──────────────────────────────────────
+function updateViewportVars() {
+  const vv = window.visualViewport;
+  const viewportHeight = vv?.height ?? window.innerHeight;
+  const viewportTop = vv?.offsetTop ?? 0;
+  const keyboardInset = vv
+    ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+    : 0;
+
+  document.documentElement.style.setProperty('--visual-vh', `${viewportHeight}px`);
+  document.documentElement.style.setProperty('--visual-top', `${viewportTop}px`);
+  document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset}px`);
+  app.classList.toggle('keyboard-open', keyboardInset > 60);
+
+  requestAnimationFrame(() => {
+    termTabs.find(t => t.id === activeTermTabId)?.terminal.fit();
+    if (keyboardInset <= 60) simPanels.forEach(p => sizeFrame(p));
+  });
+}
+
+updateViewportVars();
+window.visualViewport?.addEventListener('resize', updateViewportVars);
+window.visualViewport?.addEventListener('scroll', updateViewportVars);
+window.addEventListener('resize', updateViewportVars);
+
+// ── Mobile sidebar ───────────────────────────────────────────────────────────
+function setMobileSidebarOpen(open) {
+  app.classList.toggle('sidebar-open', open);
+  mobileMenuBtn.setAttribute('aria-expanded', String(open));
+  mobileMenuBtn.setAttribute('aria-label', open ? 'Close simulator list' : 'Open simulator list');
+}
+
+function closeMobileSidebar() {
+  setMobileSidebarOpen(false);
+}
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 700px), (max-height: 480px) and (max-width: 900px)').matches;
+}
+
+mobileMenuBtn.addEventListener('click', () => {
+  setMobileSidebarOpen(!app.classList.contains('sidebar-open'));
+});
+sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMobileSidebar();
+});
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -275,6 +326,7 @@ async function handleAddBoot(id, name, platform, w, h) {
   } catch { /* poll handles it */ }
 
   closeAddPopover();
+  closeMobileSidebar();
 
   // Show a booting row in the sidebar while we wait
   if (platform === 'android') {
@@ -365,8 +417,12 @@ function toggleDevice(udid, name, w, h) {
   if (simPanels.has(udid)) {
     removeSimPanel(udid);
   } else {
+    if (isMobileViewport()) {
+      for (const openUdid of [...simPanels.keys()]) removeSimPanel(openUdid, { silent: true });
+    }
     addSimPanel(udid, name, w, h);
   }
+  closeMobileSidebar();
 }
 
 function addSimPanel(udid, name, w, h) {
@@ -417,6 +473,8 @@ function addSimPanel(udid, name, w, h) {
     onStatus:            s => updatePanelStatus(udid, s),
     onFirstFrame:        () => overlayEl.classList.add('hidden'),
     onOrientationChange: () => sizeFrame(panel),
+    onRotateStart:       () => setPanelProgress(udid, 'Rotating…'),
+    onRotateEnd:         ok => clearPanelProgress(udid, ok ? null : 'Rotate failed'),
   });
   panel.stream.updateSettings({ data_saver: dsBtn.classList.contains('active') });
 
@@ -425,7 +483,7 @@ function addSimPanel(udid, name, w, h) {
   saveSession();
 }
 
-function removeSimPanel(udid) {
+function removeSimPanel(udid, { silent = false } = {}) {
   const panel = simPanels.get(udid);
   if (!panel) return;
 
@@ -442,8 +500,10 @@ function removeSimPanel(udid) {
   }
 
   if (!simPanels.size) emptyState.classList.remove('hidden');
-  renderDeviceList();
-  saveSession();
+  if (!silent) {
+    renderDeviceList();
+    saveSession();
+  }
 }
 
 // Corner radius in logical points for each device class.
@@ -545,6 +605,25 @@ function updatePanelStatus(udid, status) {
   } else {
     overlayEl.innerHTML = '<div class="spinner"></div><span>Connecting…</span>';
     overlayEl.classList.remove('hidden');
+  }
+}
+
+function setPanelProgress(udid, message) {
+  const panel = simPanels.get(udid);
+  if (!panel) return;
+  panel.overlayEl.innerHTML = `<div class="spinner"></div><span>${esc(message)}</span>`;
+  panel.overlayEl.classList.remove('hidden');
+}
+
+function clearPanelProgress(udid, errorMessage = null) {
+  const panel = simPanels.get(udid);
+  if (!panel) return;
+  if (errorMessage) {
+    panel.overlayEl.innerHTML = `<span>${esc(errorMessage)}</span>`;
+    panel.overlayEl.classList.remove('hidden');
+    setTimeout(() => panel.overlayEl.classList.add('hidden'), 1800);
+  } else {
+    panel.overlayEl.classList.add('hidden');
   }
 }
 
@@ -746,7 +825,9 @@ function closeTermTab(id) {
 function setTermOpen(open) {
   termOpen = open;
   content.classList.toggle('terminal-open', open);
+  app.classList.toggle('terminal-open', open);
   $('btn-terminal').classList.toggle('active', open);
+  updateViewportVars();
 
   termPanel.classList.add('animating');
   termPanel.classList.toggle('closed', !open);
@@ -754,6 +835,7 @@ function setTermOpen(open) {
     termPanel.classList.remove('animating');
     if (open) {
       const active = termTabs.find(t => t.id === activeTermTabId);
+      updateViewportVars();
       active?.terminal.fit();
       active?.terminal.focus();
     }
@@ -877,8 +959,9 @@ loadSims().then(() => {
     dsBtn.textContent = 'Data Saver: On';
   }
 
-  // Restore open simulator panels (only those still running)
-  for (const udid of (s.openUdids || [])) {
+  // Restore open simulator panels (only those still running). Phones only get one.
+  const restoreUdids = isMobileViewport() ? (s.openUdids || []).slice(0, 1) : (s.openUdids || []);
+  for (const udid of restoreUdids) {
     const sim = allSims.find(sim => sim.id === udid);
     if (sim) addSimPanel(sim.id, sim.name, sim.width, sim.height);
   }

@@ -270,6 +270,11 @@ class TestHandleInput:
         await _handle_input({"type": "tap", "x": 0.5, "y": 0.5}, "u1", state, backend)
         backend.tap.assert_called_once_with("u1", 0.5, 0.5, 393, 852)
 
+    async def test_tap_maps_for_forced_landscape(self, state, backend):
+        state["forced_landscape"] = True
+        await _handle_input({"type": "tap", "x": 0.25, "y": 0.75}, "u1", state, backend)
+        backend.tap.assert_called_once_with("u1", 0.25, 0.25, 852, 393)
+
     async def test_drag_dispatched(self, state, backend):
         await _handle_input(
             {"type": "drag", "x1": 0.1, "y1": 0.2, "x2": 0.9, "y2": 0.8},
@@ -292,8 +297,15 @@ class TestHandleInput:
         backend.home.assert_called_once_with("u1")
 
     async def test_rotate_dispatched(self, state, backend):
-        await _handle_input({"type": "rotate"}, "u1", state, backend)
+        with patch("simmer.backend_ios.rotate_with_xctest", return_value=False):
+            await _handle_input({"type": "rotate"}, "u1", state, backend)
         backend.rotate.assert_called_once_with("u1")
+
+    async def test_rotate_uses_xctest_without_backend_fallback(self, state, backend):
+        with patch("simmer.backend_ios.rotate_with_xctest", return_value=True):
+            await _handle_input({"type": "rotate"}, "u1", state, backend)
+        backend.rotate.assert_not_called()
+        assert state["forced_landscape"] is True
 
     async def test_rotate_sends_client_update_on_success(self, state, backend):
         class FakeWs:
@@ -307,7 +319,8 @@ class TestHandleInput:
 
         ws = FakeWs()
         backend.rotate.return_value = True
-        await _handle_input({"type": "rotate"}, "u1", state, backend, ws)
+        with patch("simmer.backend_ios.rotate_with_xctest", return_value=False):
+            await _handle_input({"type": "rotate"}, "u1", state, backend, ws)
         assert ws.messages
 
     async def test_rotate_does_not_update_client_on_failure(self, state, backend):
@@ -322,8 +335,9 @@ class TestHandleInput:
 
         ws = FakeWs()
         backend.rotate.return_value = False
-        await _handle_input({"type": "rotate"}, "u1", state, backend, ws)
-        assert ws.messages == []
+        with patch("simmer.backend_ios.rotate_with_xctest", return_value=False):
+            await _handle_input({"type": "rotate"}, "u1", state, backend, ws)
+        assert ws.messages == ['{"type": "rotate_failed"}']
 
     async def test_appearance_dispatched(self, state, backend):
         await _handle_input({"type": "appearance", "mode": "dark"}, "u1", state, backend)

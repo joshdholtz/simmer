@@ -57,4 +57,9 @@
   --dur-fast: 120ms;
   --dur-mid:  200ms;
   --dur-slow: 320ms;
+
+  /* Updated by JS on mobile so controls stay above the software keyboard. */
+  --visual-vh: 100dvh;
+  --visual-top: 0px;
+  --keyboard-inset: 0px;
 }

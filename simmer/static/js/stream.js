@@ -10,9 +10,13 @@ export class SimStream {
   #ws = null; #connectTimer = null; #reconnectTimer = null; #watchdog = null;
   #lastFrameAt = 0; #firstFrame = false; #frameInFlight = false;
   #portraitW; #portraitH; #isLandscape = false;
-  #onStatus; #onFirstFrame; #onOrientationChange;
+  #onStatus; #onFirstFrame; #onOrientationChange; #onRotateStart; #onRotateEnd;
 
-  constructor(udid, canvas, { fps = 15, quality = 70, onStatus, onFirstFrame, onOrientationChange } = {}) {
+  constructor(
+    udid,
+    canvas,
+    { fps = 15, quality = 70, onStatus, onFirstFrame, onOrientationChange, onRotateStart, onRotateEnd } = {}
+  ) {
     this.#udid = udid;
     this.#canvas = canvas;
     this.#ctx = canvas.getContext('2d');
@@ -21,6 +25,8 @@ export class SimStream {
     this.#onStatus = onStatus ?? (() => {});
     this.#onFirstFrame = onFirstFrame ?? (() => {});
     this.#onOrientationChange = onOrientationChange ?? (() => {});
+    this.#onRotateStart = onRotateStart ?? (() => {});
+    this.#onRotateEnd = onRotateEnd ?? (() => {});
 
     this.settings = { fps, quality, data_saver: false, dev_w: canvas.width, dev_h: canvas.height };
 
@@ -29,6 +35,7 @@ export class SimStream {
   }
 
   send(msg) {
+    if (msg?.type === 'rotate') this.#onRotateStart();
     if (this.#ws?.readyState === WebSocket.OPEN) {
       this.#ws.send(JSON.stringify(msg));
     }
@@ -102,7 +109,12 @@ export class SimStream {
       if (typeof e.data === 'string') {
         try {
           const msg = JSON.parse(e.data);
-          if (msg.type === 'rotated') this.#setOrientation(!this.#isLandscape);
+          if (msg.type === 'rotated') {
+            this.#setOrientation(!this.#isLandscape);
+            this.#onRotateEnd(true);
+          } else if (msg.type === 'rotate_failed') {
+            this.#onRotateEnd(false);
+          }
         } catch {}
         return;
       }
