@@ -50,13 +50,6 @@ def _parse_size(text: str) -> Optional[tuple[int, int]]:
     return None
 
 
-def _parse_density(text: str) -> int:
-    for line in text.splitlines():
-        m = re.search(r"(\d+)", line)
-        if m:
-            return int(m.group(1))
-    return 420  # reasonable default
-
 
 def _device_name(serial: str) -> str:
     try:
@@ -92,22 +85,18 @@ def list_sims() -> list[SimDevice]:
         if state != "device" or not serial.startswith("emulator-"):
             continue
         try:
-            size_r  = _adb(serial, "shell", "wm", "size",    timeout=4)
-            dens_r  = _adb(serial, "shell", "wm", "density", timeout=4)
-            size    = _parse_size(size_r.stdout.decode())
-            density = _parse_density(dens_r.stdout.decode())
+            size_r = _adb(serial, "shell", "wm", "size", timeout=4)
+            size   = _parse_size(size_r.stdout.decode())
             if not size:
                 continue
             pw, ph = size
-            # Convert pixels → logical dp (same units iOS uses)
-            scale = density / 160
-            w = round(pw / scale)
-            h = round(ph / scale)
+            # Store physical pixels directly — screencap returns physical-pixel PNGs
+            # so using physical pixels for tap/drag avoids density rounding errors.
             devices.append(SimDevice(
                 udid=serial,
                 name=_device_name(serial),
-                width=min(w, h),
-                height=max(w, h),
+                width=min(pw, ph),
+                height=max(pw, ph),
             ))
         except Exception:
             continue
@@ -151,21 +140,17 @@ class AdbBackend:
             return None
 
     def tap(self, udid: str, nx: float, ny: float, dev_w: int, dev_h: int) -> None:
-        # dev_w/h are logical dp; convert back to pixels for adb
-        density = _get_density(udid)
-        scale = density / 160
-        x = int(nx * dev_w * scale)
-        y = int(ny * dev_h * scale)
+        # dev_w/h are physical pixels (screencap resolution) — no density conversion needed
+        x = int(nx * dev_w)
+        y = int(ny * dev_h)
         try:
             _adb(udid, "shell", "input", "tap", str(x), str(y))
         except Exception:
             pass
 
     def drag(self, udid: str, nx1: float, ny1: float, nx2: float, ny2: float, dev_w: int, dev_h: int) -> None:
-        density = _get_density(udid)
-        scale = density / 160
-        x1, y1 = int(nx1 * dev_w * scale), int(ny1 * dev_h * scale)
-        x2, y2 = int(nx2 * dev_w * scale), int(ny2 * dev_h * scale)
+        x1, y1 = int(nx1 * dev_w), int(ny1 * dev_h)
+        x2, y2 = int(nx2 * dev_w), int(ny2 * dev_h)
         try:
             _adb(udid, "shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), "300")
         except Exception:
@@ -220,13 +205,3 @@ _KEYMAP = {
     "tab":     "KEYCODE_TAB",
 }
 
-_density_cache: dict[str, int] = {}
-
-def _get_density(serial: str) -> int:
-    if serial not in _density_cache:
-        try:
-            r = _adb(serial, "shell", "wm", "density", timeout=3)
-            _density_cache[serial] = _parse_density(r.stdout.decode())
-        except Exception:
-            _density_cache[serial] = 420
-    return _density_cache[serial]

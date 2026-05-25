@@ -450,7 +450,8 @@ function removeSimPanel(udid) {
 // Matches UIScreen.cornerRadius on the actual device at 1× logical resolution.
 function deviceCornerRadius(w, h) {
   const short = Math.min(w, h);
-  if (short >= 744) return 18;   // iPad — all models
+  if (short >= 500) return 12;   // Android physical pixels (1080+) — moderate radius
+  if (short >= 744) return 18;   // iPad logical dp
   if (short <= 320) return 4;    // iPhone SE 1st gen
   if (short <= 375) return 39;   // iPhone X / SE 2nd–3rd gen era
   return 47;                     // iPhone 12 and later (larger radius)
