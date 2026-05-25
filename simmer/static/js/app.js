@@ -765,14 +765,6 @@ function setTermOpen(open) {
 
 $('btn-terminal').addEventListener('click', () => setTermOpen(!termOpen));
 $('btn-close-term').addEventListener('click', () => {
-  // Unpin when closing so the bottom tab bar is always reachable
-  if (termPinned) {
-    termPinned = false;
-    content.classList.remove('pinned-right');
-    $('btn-pin-term').classList.remove('active');
-    termPanel.style.width = '';
-    termPanel.style.height = '300px';
-  }
   setTermOpen(false);
 });
 $('btn-add-term').addEventListener('click', addTermTab);
@@ -891,10 +883,9 @@ loadSims().then(() => {
     if (sim) addSimPanel(sim.id, sim.name, sim.width, sim.height);
   }
 
-  // Restore terminal layout first, then open it (so size is set before fit())
-  // Only restore pinned state if the terminal was also open — otherwise the
-  // bottom tab bar would be hidden with no way to reopen the terminal.
-  if (s.termPinned && s.termOpen) {
+  // Restore terminal layout first, then open it (so size is set before fit()).
+  // A closed pinned terminal reopens from the right-edge launcher rail.
+  if (s.termPinned) {
     termPinned = true;
     content.classList.add('pinned-right');
     $('btn-pin-term').classList.add('active');
