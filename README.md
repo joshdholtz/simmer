@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/joshdholtz/simmer/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/joshdholtz/simmer?style=flat-square&color=0a84ff"></a>
+  <a href="https://github.com/joshdholtz/simmer/actions/workflows/test.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/joshdholtz/simmer/test.yml?branch=main&style=flat-square&label=tests"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-30d158?style=flat-square"></a>
   <img alt="Platform: macOS" src="https://img.shields.io/badge/platform-macOS-bf5af2?style=flat-square">
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-ff9f0a?style=flat-square">
