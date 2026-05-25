@@ -35,7 +35,7 @@ def list_sims() -> list[SimDevice]:
         for dev in devices:
             if dev.get("state") != "Booted":
                 continue
-            size = logical_size(dev["name"]) or _measure(dev["udid"])
+            size = _size_for_device(dev["name"], dev["udid"])
             if size:
                 sims.append(
                     SimDevice(
@@ -46,6 +46,23 @@ def list_sims() -> list[SimDevice]:
                     )
                 )
     return sims
+
+
+def _size_for_device(name: str, udid: str) -> Optional[tuple[int, int]]:
+    # iPad simulator names change often and broad fallbacks like "iPad" can be
+    # stale. Measure booted iPads so idb tap coordinates match the live screen.
+    if "ipad" in name.lower():
+        return _measure(udid) or logical_size(name)
+    return logical_size(name) or _measure(udid)
+
+
+def _logical_size_from_screenshot(w: int, h: int) -> tuple[int, int]:
+    short = min(w, h)
+    # iPads are 2x even when their screenshots are wider than iPhone 3x
+    # screenshots. The old width >= 900 => 3x heuristic made modern iPads
+    # report ~550pt wide, so idb taps landed far from the browser tap.
+    scale = 2 if short < 900 or short // 2 >= 744 else 3
+    return w // scale, h // scale
 
 
 def _measure(udid: str) -> Optional[tuple[int, int]]:
@@ -61,9 +78,7 @@ def _measure(udid: str) -> Optional[tuple[int, int]]:
             return None
         w = struct.unpack(">I", data[16:20])[0]
         h = struct.unpack(">I", data[20:24])[0]
-        # Estimate display scale from screenshot size
-        scale = 2 if w < 900 else 3
-        return w // scale, h // scale
+        return _logical_size_from_screenshot(w, h)
     finally:
         Path(tmp).unlink(missing_ok=True)
 
