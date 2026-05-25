@@ -17,6 +17,10 @@
 
 Run `simmer` in your project directory, open a browser, and your iOS Simulator appears — tappable, typeable, and shareable over your local network or Tailscale. No Xcode open. No npm. Works from an iPad on the couch.
 
+## Why
+
+> I SSH into my Mac mini for most of my development. I wanted to see and interact with my iOS Simulator without needing to be physically at my desk — and I wanted it to work on a plane, from an iPad, with as little latency as possible. Everything else required npm, a cloud account, or didn't have a terminal. So I built this.
+
 ## Features
 
 - **Live stream** — renders the simulator at up to 30 fps in any browser tab
