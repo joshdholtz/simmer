@@ -4,12 +4,12 @@ class Simmer < Formula
   license "MIT"
 
   on_arm do
-    url "https://github.com/joshdholtz/simmer/releases/download/v0.2.0/simmer-v0.2.0-arm64.tar.gz"
+    url "https://github.com/joshdholtz/simmer/releases/download/v0.5.0/simmer-v0.5.0-arm64.tar.gz"
     sha256 "" # filled in by release workflow
   end
 
   on_intel do
-    url "https://github.com/joshdholtz/simmer/releases/download/v0.2.0/simmer-v0.2.0-x86_64.tar.gz"
+    url "https://github.com/joshdholtz/simmer/releases/download/v0.5.0/simmer-v0.5.0-x86_64.tar.gz"
     sha256 "" # filled in by release workflow
   end
 
