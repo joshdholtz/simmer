@@ -454,8 +454,9 @@ function addSimPanel(udid, name, w, h) {
 
   // ── Panel object ──
   const dotEl = pillEl.querySelector('.status-dot');
+  const statsEl = pillEl.querySelector('.stream-stats');
   const panel = {
-    stream: null, panelEl, frameEl, canvasEl, overlayEl, pillEl, dotEl,
+    stream: null, panelEl, frameEl, canvasEl, overlayEl, pillEl, dotEl, statsEl,
     ro: null, appearMode: 'dark',
   };
   simPanels.set(udid, panel);
@@ -475,8 +476,10 @@ function addSimPanel(udid, name, w, h) {
     onOrientationChange: () => sizeFrame(panel),
     onRotateStart:       () => setPanelProgress(udid, 'Rotating…'),
     onRotateEnd:         ok => clearPanelProgress(udid, ok ? null : 'Rotate failed'),
+    onStats:             stats => updatePanelStats(udid, stats),
   });
   panel.stream.updateSettings({ data_saver: dsBtn.classList.contains('active') });
+  updateStreamVisibility();
 
   setFocusedPanel(udid);
   renderDeviceList();
@@ -627,12 +630,41 @@ function clearPanelProgress(udid, errorMessage = null) {
   }
 }
 
+function fmtRate(bytesPerSecond) {
+  if (bytesPerSecond >= 1024 * 1024) return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
+  if (bytesPerSecond >= 1024) return `${Math.round(bytesPerSecond / 1024)} KB/s`;
+  return `${Math.round(bytesPerSecond)} B/s`;
+}
+
+function fmtRateCompact(bytesPerSecond) {
+  if (bytesPerSecond >= 1024 * 1024) return `${(bytesPerSecond / 1024 / 1024).toFixed(1)}M`;
+  if (bytesPerSecond >= 1024) return `${Math.round(bytesPerSecond / 1024)}K`;
+  return `${Math.round(bytesPerSecond)}B`;
+}
+
+function updatePanelStats(udid, stats) {
+  const panel = simPanels.get(udid);
+  if (!panel?.statsEl) return;
+  const quality = stats.serverQuality ?? parseInt(qualSlider.value);
+  const serverFps = stats.serverFps ?? parseInt(fpsSlider.value);
+  panel.statsEl.textContent = isMobileViewport()
+    ? `${stats.fps}fps ${fmtRateCompact(stats.bps)}`
+    : `${stats.fps} fps · ${fmtRate(stats.bps)} · q${quality}`;
+  panel.statsEl.title = `Rendered ${stats.fps} fps. Server target ${serverFps} fps, quality ${quality}. Avg frame ${Math.round(stats.avgFrame / 1024 || 0)} KB. Dropped ${stats.dropped}.`;
+}
+
+function updateStreamVisibility() {
+  const paused = document.hidden || (isMobileViewport() && termOpen);
+  simPanels.forEach(p => p.stream?.updateSettings({ stream_paused: paused }));
+}
+
 // ── Controls pill (per panel) ─────────────────────────────────────────────────
 function createPill(udid) {
   const pill = document.createElement('div');
   pill.className = 'controls-pill';
   pill.innerHTML = `
     <div class="status-dot"></div>
+    <div class="stream-stats" title="Stream stats">-- fps · -- KB/s</div>
     <div class="pill-sep"></div>
     <button class="pill-btn" data-action="rotate" title="Rotate">
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -715,6 +747,8 @@ dsBtn.addEventListener('click', () => {
   simPanels.forEach(p => p.stream?.updateSettings({ data_saver: on }));
   saveSession();
 });
+document.addEventListener('visibilitychange', updateStreamVisibility);
+window.addEventListener('resize', updateStreamVisibility);
 projFilter.addEventListener('change', renderDeviceList);
 $('btn-refresh').addEventListener('click', loadSims);
 
@@ -828,6 +862,7 @@ function setTermOpen(open) {
   app.classList.toggle('terminal-open', open);
   $('btn-terminal').classList.toggle('active', open);
   updateViewportVars();
+  updateStreamVisibility();
 
   termPanel.classList.add('animating');
   termPanel.classList.toggle('closed', !open);

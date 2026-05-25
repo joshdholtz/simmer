@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from simmer.backend_base import SimDevice
-from simmer.server import _handle_input, make_app
+from simmer.server import _adapt_stream, _handle_input, make_app
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -261,10 +262,21 @@ class TestHandleInput:
         await _handle_input({"type": "settings", "data_saver": True}, "u1", state, backend)
         assert state["data_saver"] is True
 
+    async def test_settings_stream_paused_sets_ack_event(self, state, backend):
+        state["ack_event"] = asyncio.Event()
+        await _handle_input({"type": "settings", "stream_paused": True}, "u1", state, backend)
+        assert state["stream_paused"] is True
+        assert state["ack_event"].is_set()
+
     async def test_settings_dev_dimensions(self, state, backend):
         await _handle_input({"type": "settings", "dev_w": 1080, "dev_h": 2400}, "u1", state, backend)
         assert state["dev_w"] == 1080
         assert state["dev_h"] == 2400
+
+    async def test_frame_ack_sets_ack_event(self, state, backend):
+        state["ack_event"] = asyncio.Event()
+        await _handle_input({"type": "frame_ack"}, "u1", state, backend)
+        assert state["ack_event"].is_set()
 
     async def test_tap_dispatched(self, state, backend):
         await _handle_input({"type": "tap", "x": 0.5, "y": 0.5}, "u1", state, backend)
@@ -351,3 +363,18 @@ class TestHandleInput:
         backend.tap.side_effect = RuntimeError("backend crashed")
         # Must not raise — server swallows backend errors
         await _handle_input({"type": "tap", "x": 0.5, "y": 0.5}, "u1", state, backend)
+
+
+class TestStreamAdaptation:
+    def test_ack_timeout_reduces_fps_and_quality(self):
+        state = {"fps": 15, "quality": 70, "target_fps": 15, "target_quality": 70}
+        _adapt_stream(state, timed_out=True)
+        assert state["fps"] < 15
+        assert state["quality"] < 70
+
+    def test_smooth_acks_recover_toward_targets(self):
+        state = {"fps": 10, "quality": 55, "target_fps": 15, "target_quality": 70}
+        for _ in range(20):
+            _adapt_stream(state, ack_ms=40)
+        assert state["fps"] == 11
+        assert state["quality"] == 58

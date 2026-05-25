@@ -11,11 +11,23 @@ export class SimStream {
   #lastFrameAt = 0; #firstFrame = false; #frameInFlight = false;
   #portraitW; #portraitH; #isLandscape = false;
   #onStatus; #onFirstFrame; #onOrientationChange; #onRotateStart; #onRotateEnd;
+  #onStats; #statsTimer = null;
+  #stats = { frames: 0, bytes: 0, dropped: 0, lastFrames: 0, lastBytes: 0, fps: 0, bps: 0, avgFrame: 0 };
+  #serverStats = { fps: null, quality: null };
 
   constructor(
     udid,
     canvas,
-    { fps = 15, quality = 70, onStatus, onFirstFrame, onOrientationChange, onRotateStart, onRotateEnd } = {}
+    {
+      fps = 15,
+      quality = 70,
+      onStatus,
+      onFirstFrame,
+      onOrientationChange,
+      onRotateStart,
+      onRotateEnd,
+      onStats,
+    } = {}
   ) {
     this.#udid = udid;
     this.#canvas = canvas;
@@ -27,6 +39,7 @@ export class SimStream {
     this.#onOrientationChange = onOrientationChange ?? (() => {});
     this.#onRotateStart = onRotateStart ?? (() => {});
     this.#onRotateEnd = onRotateEnd ?? (() => {});
+    this.#onStats = onStats ?? (() => {});
 
     this.settings = { fps, quality, data_saver: false, dev_w: canvas.width, dev_h: canvas.height };
 
@@ -50,6 +63,7 @@ export class SimStream {
     clearTimeout(this.#connectTimer);
     clearTimeout(this.#reconnectTimer);
     clearInterval(this.#watchdog);
+    clearInterval(this.#statsTimer);
     if (this.#ws) { this.#ws.onclose = null; this.#ws.close(); this.#ws = null; }
   }
 
@@ -114,6 +128,8 @@ export class SimStream {
             this.#onRotateEnd(true);
           } else if (msg.type === 'rotate_failed') {
             this.#onRotateEnd(false);
+          } else if (msg.type === 'server_stats') {
+            this.#serverStats = { fps: msg.fps ?? null, quality: msg.quality ?? null };
           }
         } catch {}
         return;
@@ -121,13 +137,18 @@ export class SimStream {
       if (!(e.data instanceof Blob)) return;
 
       this.#lastFrameAt = Date.now();
+      this.#stats.bytes += e.data.size || 0;
       if (!this.#firstFrame) {
         this.#firstFrame = true;
         clearTimeout(noFrameTimer);
         this.#onStatus('streaming');
         this.#onFirstFrame();
       }
-      if (this.#frameInFlight) return;
+      if (this.#frameInFlight) {
+        this.#stats.dropped += 1;
+        this.send({ type: 'frame_ack', dropped: true });
+        return;
+      }
       this.#frameInFlight = true;
 
       const url = URL.createObjectURL(e.data);
@@ -135,10 +156,16 @@ export class SimStream {
       img.onload = () => {
         this.#setOrientation(img.naturalWidth > img.naturalHeight);
         this.#ctx.drawImage(img, 0, 0, this.#canvas.width, this.#canvas.height);
+        this.#stats.frames += 1;
         URL.revokeObjectURL(url);
         this.#frameInFlight = false;
+        this.send({ type: 'frame_ack' });
       };
-      img.onerror = () => { URL.revokeObjectURL(url); this.#frameInFlight = false; };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        this.#frameInFlight = false;
+        this.send({ type: 'frame_ack', decode_error: true });
+      };
       img.src = url;
     };
 
@@ -150,6 +177,25 @@ export class SimStream {
         this.#connect();
       }
     }, WATCHDOG_POLL);
+
+    clearInterval(this.#statsTimer);
+    this.#statsTimer = setInterval(() => {
+      const frames = this.#stats.frames - this.#stats.lastFrames;
+      const bytes = this.#stats.bytes - this.#stats.lastBytes;
+      this.#stats.lastFrames = this.#stats.frames;
+      this.#stats.lastBytes = this.#stats.bytes;
+      this.#stats.fps = frames;
+      this.#stats.bps = bytes;
+      this.#stats.avgFrame = frames ? bytes / frames : this.#stats.avgFrame;
+      this.#onStats({
+        fps: this.#stats.fps,
+        bps: this.#stats.bps,
+        avgFrame: this.#stats.avgFrame,
+        dropped: this.#stats.dropped,
+        serverFps: this.#serverStats.fps,
+        serverQuality: this.#serverStats.quality,
+      });
+    }, 1000);
   }
 
   #setupPointer() {

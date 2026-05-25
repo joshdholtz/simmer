@@ -162,6 +162,26 @@ def _map_for_forced_landscape(nx: float, ny: float) -> tuple[float, float]:
     return 1.0 - ny, nx
 
 
+def _adapt_stream(state: dict, ack_ms: Optional[float] = None, timed_out: bool = False) -> None:
+    target_fps = int(state.get("target_fps", state["fps"]))
+    target_quality = int(state.get("target_quality", state["quality"]))
+    if timed_out or (ack_ms is not None and ack_ms > 220):
+        state["smooth_frames"] = 0
+        state["fps"] = max(4, int(state["fps"] * 0.8))
+        state["quality"] = max(35, int(state["quality"] - 8))
+        return
+    if ack_ms is None:
+        return
+    if ack_ms < 90:
+        state["smooth_frames"] = int(state.get("smooth_frames", 0)) + 1
+    else:
+        state["smooth_frames"] = 0
+    if state["smooth_frames"] >= 20:
+        state["smooth_frames"] = 0
+        state["fps"] = min(target_fps, state["fps"] + 1)
+        state["quality"] = min(target_quality, state["quality"] + 3)
+
+
 @web.middleware
 async def _cors_middleware(request: web.Request, handler) -> web.StreamResponse:
     if request.method == "OPTIONS":
@@ -367,12 +387,19 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
     q = request.rel_url.query
     state = {
         "fps": int(q.get("fps", request.app["default_fps"])),
+        "target_fps": int(q.get("fps", request.app["default_fps"])),
         "quality": int(q.get("quality", request.app["default_quality"])),
+        "target_quality": int(q.get("quality", request.app["default_quality"])),
         "data_saver": q.get("data_saver", "0") == "1",
+        "stream_paused": False,
         "dev_w": int(q.get("w", 390)),
         "dev_h": int(q.get("h", 844)),
         "forced_landscape": _forced_landscape.get(udid, False),
+        "ack_event": asyncio.Event(),
+        "ack_sent_at": None,
+        "smooth_frames": 0,
     }
+    state["ack_event"].set()
 
     # Evict any zombie handler for this UDID immediately
     old = _active_sim_ws.pop(udid, None)
@@ -395,7 +422,20 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
 
     async def frame_loop() -> None:
         send_failures = 0
+        frame_id = 0
+        last_stats_at = 0.0
         while not ws.closed:
+            if state.get("stream_paused"):
+                await asyncio.sleep(0.25)
+                continue
+            if not state["ack_event"].is_set():
+                try:
+                    await asyncio.wait_for(state["ack_event"].wait(), timeout=0.35)
+                except asyncio.TimeoutError:
+                    _adapt_stream(state, timed_out=True)
+                    state["ack_event"].set()
+                    state["ack_sent_at"] = None
+                    continue
             frame = await _capture(backend, udid, state["quality"])
             if frame:
                 if state["forced_landscape"] or (_needs_rotation and await _run(_is_landscape, udid)):
@@ -409,7 +449,23 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
                         continue
                     last_hash[0] = h
                 try:
+                    state["ack_event"].clear()
+                    state["ack_sent_at"] = asyncio.get_running_loop().time()
+                    frame_id += 1
                     await ws.send_bytes(frame)
+                    now = asyncio.get_running_loop().time()
+                    if now - last_stats_at >= 1.0:
+                        last_stats_at = now
+                        await ws.send_str(
+                            json.dumps(
+                                {
+                                    "type": "server_stats",
+                                    "fps": state["fps"],
+                                    "quality": state["quality"],
+                                    "frame_id": frame_id,
+                                }
+                            )
+                        )
                     send_failures = 0
                 except Exception:
                     send_failures += 1
@@ -453,15 +509,30 @@ async def _handle_input(
 
     if t == "settings":
         if "fps" in data:
-            state["fps"] = max(1, min(60, int(data["fps"])))
+            state["target_fps"] = max(1, min(60, int(data["fps"])))
+            state["fps"] = state["target_fps"]
         if "quality" in data:
-            state["quality"] = max(10, min(95, int(data["quality"])))
+            state["target_quality"] = max(10, min(95, int(data["quality"])))
+            state["quality"] = state["target_quality"]
         if "data_saver" in data:
             state["data_saver"] = bool(data["data_saver"])
+        if "stream_paused" in data:
+            state["stream_paused"] = bool(data["stream_paused"])
+            if state["stream_paused"]:
+                state.get("ack_event") and state["ack_event"].set()
         if "dev_w" in data:
             state["dev_w"] = int(data["dev_w"])
         if "dev_h" in data:
             state["dev_h"] = int(data["dev_h"])
+        return
+
+    if t == "frame_ack":
+        event = state.get("ack_event")
+        sent_at = state.get("ack_sent_at")
+        if event is not None:
+            event.set()
+        if sent_at is not None:
+            _adapt_stream(state, ack_ms=(asyncio.get_running_loop().time() - sent_at) * 1000)
         return
 
     try:

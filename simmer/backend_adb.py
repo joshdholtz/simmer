@@ -39,6 +39,23 @@ _ADB = _find_adb()
 _EMULATOR = _find_emulator()
 
 
+def _png_to_jpeg(data: bytes, quality: int) -> Optional[bytes]:
+    try:
+        import AppKit
+
+        ns_data = AppKit.NSData.dataWithBytes_length_(data, len(data))
+        rep = AppKit.NSBitmapImageRep.imageRepWithData_(ns_data)
+        if rep is None:
+            return None
+        jpeg = rep.representationUsingType_properties_(
+            AppKit.NSBitmapImageFileTypeJPEG,
+            {AppKit.NSImageCompressionFactor: quality / 100.0},
+        )
+        return bytes(jpeg) if jpeg is not None else None
+    except Exception:
+        return None
+
+
 def _adb(serial: str, *args, timeout: int = 8) -> subprocess.CompletedProcess:
     return subprocess.run([_ADB, "-s", serial, *args], capture_output=True, timeout=timeout)
 
@@ -137,8 +154,9 @@ class AdbBackend:
             r = _adb(udid, "exec-out", "screencap", "-p", timeout=6)
             if r.returncode != 0 or not r.stdout:
                 return None
-            # Send raw PNG — browser decodes it fine
-            return r.stdout
+            # Android screencap returns PNG. JPEG is usually much smaller for a
+            # live stream, while falling back to PNG preserves reliability.
+            return _png_to_jpeg(r.stdout, quality) or r.stdout
         except Exception:
             return None
 
