@@ -12,6 +12,13 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/components.css">
   <link rel="stylesheet" href="/css/terminal.css">
+  <script>
+    // Heal broken saved state: pinned=true + open=false hides the terminal button forever
+    try {
+      var _s = JSON.parse(localStorage.getItem('simmer_session') || '{}');
+      if (_s.termPinned && !_s.termOpen) { delete _s.termPinned; localStorage.setItem('simmer_session', JSON.stringify(_s)); }
+    } catch(e) {}
+  </script>
 </head>
 <body>
 
