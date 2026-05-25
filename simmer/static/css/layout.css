@@ -224,6 +224,7 @@ html, body {
 
 /* Hide when terminal is pinned to the side (it's already visible there) */
 #content.pinned-right #bottom-tab-bar { display: none; }
+#content.terminal-open #bottom-tab-bar { display: none; }
 
 .bottom-tab {
   display: flex;

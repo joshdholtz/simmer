@@ -745,6 +745,7 @@ function closeTermTab(id) {
 // ── Terminal open/close/pin ───────────────────────────────────────────────────
 function setTermOpen(open) {
   termOpen = open;
+  content.classList.toggle('terminal-open', open);
   $('btn-terminal').classList.toggle('active', open);
 
   termPanel.classList.add('animating');
