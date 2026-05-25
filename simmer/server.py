@@ -329,13 +329,13 @@ async def _ws(request: web.Request) -> web.WebSocketResponse:
     except (AssertionError, ConnectionResetError):
         return ws  # client disconnected before WS upgrade finished
 
-    sim = await _run(lambda: next((s for s in backend.list_sims() if s.udid == udid), None))
+    q = request.rel_url.query
     state = {
-        "fps": int(request.rel_url.query.get("fps", request.app["default_fps"])),
-        "quality": int(request.rel_url.query.get("quality", request.app["default_quality"])),
-        "data_saver": request.rel_url.query.get("data_saver", "0") == "1",
-        "dev_w": sim.width if sim else 390,
-        "dev_h": sim.height if sim else 844,
+        "fps":        int(q.get("fps", request.app["default_fps"])),
+        "quality":    int(q.get("quality", request.app["default_quality"])),
+        "data_saver": q.get("data_saver", "0") == "1",
+        "dev_w":      int(q.get("w", 390)),
+        "dev_h":      int(q.get("h", 844)),
     }
 
     # Evict any zombie handler for this UDID immediately

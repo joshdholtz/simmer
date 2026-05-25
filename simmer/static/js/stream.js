@@ -65,7 +65,7 @@ export class SimStream {
 
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(
-      `${proto}//${location.host}/ws/${this.#udid}?fps=${this.settings.fps}&quality=${this.settings.quality}`
+      `${proto}//${location.host}/ws/${this.#udid}?fps=${this.settings.fps}&quality=${this.settings.quality}&w=${this.#portraitW}&h=${this.#portraitH}`
     );
     this.#ws = ws;
     ws.binaryType = 'blob';

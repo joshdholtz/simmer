@@ -1,5 +1,6 @@
 from __future__ import annotations
 import threading
+import concurrent.futures
 from typing import Optional
 from .backend_base import SimDevice
 
@@ -18,15 +19,17 @@ class MultiBackend:
         return " + ".join(names)
 
     def list_sims(self) -> list[SimDevice]:
-        sims = []
         new_map: dict[str, object] = {}
-        for b in self._backends:
-            try:
-                for s in b.list_sims():
-                    new_map[s.udid] = b
-                    sims.append(s)
-            except Exception:
-                pass
+        sims: list[SimDevice] = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self._backends)) as ex:
+            futures = {ex.submit(b.list_sims): b for b in self._backends}
+            for fut, b in futures.items():
+                try:
+                    for s in fut.result():
+                        new_map[s.udid] = b
+                        sims.append(s)
+                except Exception:
+                    pass
         with self._lock:
             self._udid_map = new_map
         return sims
