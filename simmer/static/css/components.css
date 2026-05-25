@@ -102,8 +102,8 @@
 
 /* ── Permissions widget ── */
 .perms-widget {
-  border-top: 1px solid var(--border-subtle);
-  margin: 0 var(--sp-4) var(--sp-2);
+  padding: 0 var(--sp-3) var(--sp-3);
+  flex-shrink: 0;
 }
 .perms-widget.hidden { display: none; }
 
@@ -112,51 +112,65 @@
   align-items: center;
   gap: var(--sp-2);
   width: 100%;
-  padding: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-1);
   background: none;
   border: none;
-  color: var(--warning);
+  color: var(--text-tertiary);
   font-size: 11px;
   font-family: var(--font-sans);
   cursor: pointer;
   text-align: left;
+  border-radius: var(--r-sm);
+  transition: color var(--dur-fast);
 }
-.perms-toggle:hover { opacity: 0.8; }
+.perms-toggle:hover { color: var(--text-secondary); }
 
 .perms-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--warning);
   flex-shrink: 0;
+  opacity: 0.7;
 }
-.perms-label { flex: 1; font-weight: 500; }
+.perms-label { flex: 1; }
 .perms-chevron {
-  font-size: 14px;
+  font-size: 11px;
   transition: transform var(--dur-fast);
-  color: var(--text-tertiary);
+  opacity: 0.5;
 }
 .perms-toggle.open .perms-chevron { transform: rotate(90deg); }
 
 .perms-body {
   display: none;
   flex-direction: column;
-  gap: var(--sp-2);
-  padding-bottom: var(--sp-2);
+  gap: 1px;
+  margin-top: var(--sp-1);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
 .perms-body.open { display: flex; }
 
-.perms-item { display: flex; flex-direction: column; gap: 2px; }
+.perms-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--sp-2) var(--sp-3);
+}
+.perms-item + .perms-item {
+  border-top: 1px solid var(--border-subtle);
+}
 .perms-item-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--warning);
+  color: var(--text-secondary);
 }
 .perms-item-detail {
   font-size: 10px;
   color: var(--text-tertiary);
-  line-height: 1.4;
-  font-family: var(--font-mono);
+  line-height: 1.5;
 }
 
 /* ── Sidebar controls ── */

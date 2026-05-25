@@ -67,11 +67,11 @@ function renderPermsWidget(info) {
   const missing = [];
   if (!p.screen_recording) missing.push({
     label: 'Screen Recording',
-    detail: 'System Settings → Privacy & Security → Screen Recording → add Terminal',
+    detail: 'System Settings → Privacy & Security → Screen Recording',
   });
   if (!p.accessibility) missing.push({
     label: 'Accessibility',
-    detail: 'System Settings → Privacy & Security → Accessibility → add rotate_sim',
+    detail: 'System Settings → Privacy & Security → Accessibility',
   });
 
   if (isFast || missing.length === 0) {
@@ -83,19 +83,10 @@ function renderPermsWidget(info) {
 
   permsList.innerHTML = missing.map(m => `
     <div class="perms-item">
-      <div class="perms-item-label">⚠ ${esc(m.label)}</div>
+      <div class="perms-item-label">${esc(m.label)}</div>
       <div class="perms-item-detail">${esc(m.detail)}</div>
     </div>
   `).join('');
-
-  if (!p.idb) {
-    permsList.innerHTML += `
-      <div class="perms-item">
-        <div class="perms-item-label">ℹ idb not found</div>
-        <div class="perms-item-detail">brew tap facebook/fb && brew install idb-companion</div>
-      </div>
-    `;
-  }
 
   permsToggle.onclick = () => {
     permsOpen = !permsOpen;
