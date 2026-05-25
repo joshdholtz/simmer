@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-05-25
+
+### Fixed
+- Terminal panel no longer disappears when the last tab is closed while pinned to the right rail
+- Session restore no longer enters an unreachable state (pinned + closed) that hid the terminal button
+- iPad tap coordinates corrected in simctl/idb compat backend
+- WebSocket close races silenced
+- CLI and setup cleanup
+
+### Changed
+- Terminal launcher redesigned: pill-style button, collapses to icon-only rail when terminal is pinned right
+- Terminal close button replaced with collapse chevron (∨)
+
 ## [0.5.0] - 2026-05-24
 
 ### Added
