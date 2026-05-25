@@ -1,4 +1,4 @@
-import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim } from './api.js';
+import { fetchInfo, fetchSims, fetchAvailableDevices, bootSim, requestPermissions } from './api.js';
 import { SimStream } from './stream.js';
 import { SimTerminal } from './terminal.js';
 
@@ -88,10 +88,21 @@ function renderPermsWidget(info) {
     </div>
   `).join('');
 
-  permsToggle.onclick = () => {
+  permsToggle.onclick = async () => {
     permsOpen = !permsOpen;
     permsBody.classList.toggle('open', permsOpen);
     permsToggle.classList.toggle('open', permsOpen);
+    if (permsOpen) {
+      await requestPermissions();
+      // re-poll info after dialogs dismissed — update badge + widget
+      const updated = await fetchInfo();
+      renderPermsWidget(updated);
+      if (updated.mode) {
+        const fast = updated.mode.startsWith('fast');
+        modeBadge.textContent = fast ? 'fast' : 'compat';
+        modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
+      }
+    }
   };
 }
 

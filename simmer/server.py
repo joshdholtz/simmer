@@ -168,6 +168,7 @@ def make_app(
     app["bundle_id"] = bundle_id
     app.router.add_get("/", _index)
     app.router.add_get("/api/info", _info)
+    app.router.add_post("/api/request-permissions", _request_permissions)
     app.router.add_get("/api/sims", _sims)
     app.router.add_get("/api/devices", _devices)
     app.router.add_post("/api/boot/{udid}", _boot)
@@ -193,6 +194,32 @@ async def _info(request: web.Request) -> web.Response:
         "idb": has_idb(),
     }
     return web.json_response(info)
+
+
+async def _request_permissions(request: web.Request) -> web.Response:
+    import asyncio
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _do_request_permissions)
+    from .backend_base import has_screen_recording, has_accessibility
+    return web.json_response({
+        "screen_recording": has_screen_recording(),
+        "accessibility": has_accessibility(),
+    })
+
+
+def _do_request_permissions() -> None:
+    try:
+        import Quartz
+        Quartz.CGRequestScreenCaptureAccess()
+    except Exception:
+        pass
+    try:
+        import ApplicationServices
+        ApplicationServices.AXIsProcessTrustedWithOptions(
+            {ApplicationServices.kAXTrustedCheckOptionPrompt: True}
+        )
+    except Exception:
+        pass
 
 
 async def _run(fn, *args):

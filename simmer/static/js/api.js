@@ -26,3 +26,7 @@ export async function fetchAvailableDevices() {
 export async function bootSim(udid) {
   return _fetch(`/api/boot/${udid}`, { method: 'POST' });
 }
+
+export async function requestPermissions() {
+  return _fetch('/api/request-permissions', { method: 'POST' });
+}
