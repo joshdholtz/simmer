@@ -44,6 +44,8 @@
   color: var(--text-primary);
 }
 .device-dims { font-size: 11px; color: var(--text-tertiary); }
+.device-item-booting { opacity: 0.5; pointer-events: none; }
+
 .device-badge {
   font-size: 9px;
   font-weight: 700;

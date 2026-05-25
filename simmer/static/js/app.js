@@ -34,6 +34,7 @@ const permsList      = $('perms-list');
 // ── State ────────────────────────────────────────────────────────────────────
 let allSims = [];
 let hasAdb = false;
+const _pendingBoots = new Map(); // id → {name, platform}  (booting but not yet in sims)
 
 // udid → { stream, panelEl, frameEl, canvasEl, overlayEl, pillEl, dotEl, ro, appearMode }
 const simPanels = new Map();
@@ -131,13 +132,48 @@ function renderPermsWidget(info) {
   };
 }
 
+// ── Sims cache (stale-while-revalidate) ───────────────────────────────────────
+const _SIMS_CACHE = 'simmerSimsCache';
+
+function _readSimsCache() {
+  try { return JSON.parse(localStorage.getItem(_SIMS_CACHE)); } catch { return null; }
+}
+function _writeSimsCache(sims, info) {
+  try {
+    localStorage.setItem(_SIMS_CACHE, JSON.stringify({
+      sims, hasAdb: info.has_adb !== false,
+      mode: info.mode, bundleId: info.bundle_id ?? null,
+    }));
+  } catch {}
+}
+
 // ── Device list ──────────────────────────────────────────────────────────────
 async function loadSims() {
-  deviceList.innerHTML = '<div class="device-list-empty">Scanning…</div>';
+  // Show cached data immediately so the sidebar isn't blank while we wait
+  const cached = _readSimsCache();
+  if (cached?.sims) {
+    allSims = cached.sims;
+    hasAdb = cached.hasAdb ?? false;
+    if (cached.mode) {
+      const fast = cached.mode.startsWith('fast');
+      modeBadge.textContent = fast ? 'fast' : 'compat';
+      modeBadge.className = 'mode-badge ' + (fast ? 'fast' : 'compat');
+    }
+    if (cached.bundleId) {
+      projFilterWrap.classList.add('visible');
+      projFilterWrap.querySelector('span').textContent =
+        cached.bundleId.split('.').pop() + ' only';
+    }
+    renderDeviceList();
+  } else {
+    deviceList.innerHTML = '<div class="device-list-empty">Scanning…</div>';
+  }
+
   try {
     const [sims, info] = await Promise.all([fetchSims(), fetchInfo()]);
     allSims = sims;
     hasAdb = info.has_adb !== false;
+    _writeSimsCache(sims, info);
     updateModeBadge(info);
     renderPermsWidget(info);
 
@@ -151,7 +187,9 @@ async function loadSims() {
 
     renderDeviceList();
   } catch {
-    deviceList.innerHTML = '<div class="device-list-empty">Could not reach server</div>';
+    if (!cached?.sims) {
+      deviceList.innerHTML = '<div class="device-list-empty">Could not reach server</div>';
+    }
   }
 }
 
@@ -238,6 +276,15 @@ async function handleAddBoot(id, name, platform, w, h) {
 
   closeAddPopover();
 
+  // Show a booting row in the sidebar while we wait
+  if (platform === 'android') {
+    _pendingBoots.set(id, { name, platform });
+    renderDeviceList();
+  }
+
+  // Android emulators can take 2-3 minutes to fully boot
+  const timeout = platform === 'android' ? 180_000 : 90_000;
+
   const poll = setInterval(async () => {
     const sims = await fetchSims().catch(() => null);
     if (!sims) return;
@@ -250,13 +297,19 @@ async function handleAddBoot(id, name, platform, w, h) {
     if (booted) {
       clearInterval(poll);
       _bootingIds.delete(id);
+      _pendingBoots.delete(id);
       allSims = sims;
       renderDeviceList();
       addSimPanel(booted.id, booted.name, booted.width, booted.height);
     }
   }, 2000);
 
-  setTimeout(() => { clearInterval(poll); _bootingIds.delete(id); }, 90_000);
+  setTimeout(() => {
+    clearInterval(poll);
+    _bootingIds.delete(id);
+    _pendingBoots.delete(id);
+    renderDeviceList();
+  }, timeout);
 }
 
 addSimBtn.addEventListener('click', openAddPopover);
@@ -270,13 +323,25 @@ function renderDeviceList() {
   const adbHint = !hasAdb
     ? '<div class="device-list-hint">🤖 <span>No <code>adb</code> — install <code>android-platform-tools</code> for Android</span></div>'
     : '';
+
+  // Booting-but-not-yet-running rows
+  const bootingRows = [..._pendingBoots.values()].map(b => `
+    <div class="device-item device-item-booting">
+      <span class="device-icon">${simIcon(b.name)}</span>
+      <span class="device-info">
+        <span class="device-name">${esc(b.name)}</span>
+        <span class="device-dims">Booting…</span>
+      </span>
+      <span class="add-spinner" style="flex-shrink:0;margin-right:2px"></span>
+    </div>`).join('');
+
   if (!sims.length) {
-    deviceList.innerHTML = `<div class="device-list-empty">${
+    deviceList.innerHTML = bootingRows + `<div class="device-list-empty">${
       filterOn ? 'No project simulators' : 'No simulators running'
     }</div>${adbHint}`;
     return;
   }
-  deviceList.innerHTML = sims.map(s => `
+  deviceList.innerHTML = bootingRows + sims.map(s => `
     <div class="device-item${simPanels.has(s.id) ? ' active' : ''}"
          data-udid="${esc(s.id)}" data-name="${esc(s.name)}"
          data-w="${s.width}" data-h="${s.height}">

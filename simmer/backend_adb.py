@@ -69,7 +69,7 @@ def _device_name(serial: str) -> str:
 
 def list_sims() -> list[SimDevice]:
     try:
-        r = subprocess.run([_ADB, "devices"], capture_output=True, text=True, timeout=5)
+        r = subprocess.run([_ADB, "devices"], capture_output=True, text=True, timeout=3)
     except Exception:
         return []
 
