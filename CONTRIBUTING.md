@@ -30,6 +30,8 @@ simmer/
   server.py            aiohttp HTTP + WebSocket server
   backend_quartz.py    Fast backend: Quartz capture + CGEvent input
   backend_simctl.py    Compat backend: simctl capture + idb input
+  backend_adb.py       Android backend: adb screencap + adb input
+  backend_multi.py     Combines multiple backends, routes by UDID
   backend_base.py      Shared helpers, device discovery, boot
   static/
     index.html
@@ -45,15 +47,22 @@ The frontend is plain ES modules — no bundler, no build step.
 |------|---------|-------|----------|
 | fast | Quartz | CGEvent | Screen Recording + Accessibility permissions |
 | compat | simctl | idb | `idb-companion` |
+| android | adb screencap | adb input | Android Studio SDK adb |
 
-Both backends implement the same interface in `backend_base.py`. If you're adding capture or input features, you'll likely need to touch both.
+All backends implement the `Backend` protocol in `backend_base.py`. `MultiBackend` wraps them together and routes calls to the correct backend by UDID — iOS and Android appear in the same sidebar automatically.
+
+### Android notes
+
+simmer expects the **SDK-bundled adb** from Android Studio (`~/Library/Android/sdk/platform-tools/adb`), not Homebrew's `android-platform-tools`. Homebrew's adb starts a separate daemon that can't see emulators launched by Android Studio. If both are present, simmer prefers the SDK one automatically.
+
+Android screencap returns physical pixels, so device dimensions and tap coordinates are stored in physical pixels throughout — no dp/density conversion needed.
 
 ## Guidelines
 
 - No bundler, no npm — keep the frontend dependency-free
 - Match the existing code style (no formatter is enforced, just be consistent)
 - Keep PRs focused — one thing per PR is easier to review
-- If you're adding a feature, update the README
+- If you're adding a feature, update the README and CHANGELOG
 
 ## Reporting bugs
 
