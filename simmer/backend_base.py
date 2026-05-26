@@ -60,10 +60,16 @@ def has_screen_recording() -> bool:
 
 
 def has_accessibility() -> bool:
+    # AXIsProcessTrusted lives in ApplicationServices. pyobjc <= 11 re-exported
+    # it via Quartz, but 12.x dropped that — call it through ctypes so the
+    # check works regardless of pyobjc version.
     try:
-        import Quartz
+        import ctypes
+        import ctypes.util
 
-        return bool(Quartz.AXIsProcessTrusted())
+        lib = ctypes.CDLL(ctypes.util.find_library("ApplicationServices"))
+        lib.AXIsProcessTrusted.restype = ctypes.c_bool
+        return bool(lib.AXIsProcessTrusted())
     except Exception:
         return False
 
